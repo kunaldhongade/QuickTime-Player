@@ -1,0 +1,10 @@
+/build/
+/.cache/
+/.idea/
+/.vscode/
+*.user
+*.swp
+.DS_Store
+compile_commands.json
+test-media/
+FrameViewer-*.AppImage

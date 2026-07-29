@@ -1,0 +1,90 @@
+#include "app/ApplicationController.hpp"
+#include "rendering/MpvVideoItem.hpp"
+
+#include <QGuiApplication>
+#include <QImage>
+#include <QKeyEvent>
+#include <QQmlApplicationEngine>
+#include <QQmlContext>
+#include <QQuickStyle>
+#include <QQuickWindow>
+#include <QSGRendererInterface>
+#include <QTimer>
+
+int main(int argc, char* argv[])
+{
+    QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
+
+    QGuiApplication application(argc, argv);
+    QCoreApplication::setOrganizationName(QStringLiteral("FrameViewer"));
+    QCoreApplication::setOrganizationDomain(QStringLiteral("frameviewer.local"));
+    QCoreApplication::setApplicationName(QStringLiteral("FrameViewer"));
+    QCoreApplication::setApplicationVersion(QStringLiteral(FRAMEVIEWER_VERSION));
+    QQuickStyle::setStyle(QStringLiteral("Basic"));
+
+    qmlRegisterType<frameviewer::MpvVideoItem>(
+        "FrameViewer.Native", 1, 0, "MpvVideoItem");
+
+    frameviewer::ApplicationController controller;
+    QQmlApplicationEngine engine;
+    engine.rootContext()->setContextProperty(QStringLiteral("appController"), &controller);
+
+    QObject::connect(
+        &engine,
+        &QQmlApplicationEngine::objectCreationFailed,
+        &application,
+        [] { QCoreApplication::exit(EXIT_FAILURE); },
+        Qt::QueuedConnection);
+    engine.load(QUrl(QStringLiteral("qrc:/qt/qml/FrameViewer/qml/Main.qml")));
+    if (engine.rootObjects().isEmpty()) {
+        return EXIT_FAILURE;
+    }
+
+    if (application.arguments().count() > 1) {
+        controller.openFile(QUrl::fromLocalFile(application.arguments().at(1)));
+    }
+
+    // A deterministic, opt-in capture hook lets CI inspect the native QML/OpenGL composition
+    // without screen-recording permission. It is inert in normal application launches.
+    const QString capturePath =
+        qEnvironmentVariable("FRAMEVIEWER_CAPTURE_PATH");
+    if (!capturePath.isEmpty()) {
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        if (qEnvironmentVariableIsSet("FRAMEVIEWER_TEST_RIGHT_KEY")) {
+            QTimer::singleShot(1500, window, [window] {
+                QKeyEvent press(QEvent::KeyPress, Qt::Key_Right, Qt::NoModifier);
+                QCoreApplication::sendEvent(window, &press);
+                QKeyEvent autoRepeat(QEvent::KeyPress,
+                                     Qt::Key_Right,
+                                     Qt::NoModifier,
+                                     QString{},
+                                     true,
+                                     2);
+                QCoreApplication::sendEvent(window, &autoRepeat);
+            });
+        }
+        if (qEnvironmentVariableIsSet("FRAMEVIEWER_TEST_END_BOUNDARY")) {
+            QTimer::singleShot(1500, window, [&controller] {
+                controller.seekToLastFrame();
+            });
+            QTimer::singleShot(2500, window, [&controller] {
+                controller.stepFrames(1);
+            });
+        }
+        const int captureDelay =
+            qEnvironmentVariableIntValue("FRAMEVIEWER_CAPTURE_DELAY_MS");
+        QTimer::singleShot(captureDelay > 0 ? captureDelay : 2500,
+                           window,
+                           [window, capturePath, &controller] {
+                               if (window) {
+                                   window->grabWindow().save(capturePath);
+                               }
+                               qInfo() << "Captured frame" << controller.currentFrame() << "of"
+                                       << controller.totalFrames();
+                               if (qEnvironmentVariableIsSet("FRAMEVIEWER_CAPTURE_AND_EXIT")) {
+                                   QCoreApplication::quit();
+                               }
+                           });
+    }
+    return application.exec();
+}

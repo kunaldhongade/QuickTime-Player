@@ -1,0 +1,5 @@
+Base image: ubuntu:24.04
+x86_64
+cmake version 3.28.3
+c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+ffmpeg 7:6.1.1-3ubuntu5\nlibmpv-dev 0.37.0-1ubuntu4\nqt6-base-dev 6.4.2+dfsg-21.1build5\nqt6-declarative-dev 6.4.2+dfsg-4build3\n

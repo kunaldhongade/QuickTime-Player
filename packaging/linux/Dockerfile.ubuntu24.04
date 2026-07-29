@@ -1,0 +1,65 @@
+FROM ubuntu:24.04 AS build
+
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    cmake \
+    dpkg-dev \
+    ffmpeg \
+    file \
+    libgl1-mesa-dev \
+    libmpv-dev \
+    libqt6opengl6-dev \
+    ninja-build \
+    pkg-config \
+    qml6-module-qtqml-workerscript \
+    qml6-module-qtquick \
+    qml6-module-qtquick-controls \
+    qml6-module-qtquick-dialogs \
+    qml6-module-qtquick-layouts \
+    qt6-base-dev \
+    qt6-declarative-dev \
+    qt6-tools-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /source
+COPY . .
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        qml6-module-qtqml \
+        qml6-module-qtquick-templates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN cmake --preset debug \
+    && cmake --build --preset debug \
+    && ctest --preset debug
+
+RUN cmake --preset release \
+    && cmake --build --preset release \
+    && cpack --config build/release/CPackConfig.cmake -G DEB \
+    && status=0 \
+    && timeout 8 env \
+        QT_QPA_PLATFORM=offscreen \
+        QT_QUICK_BACKEND=software \
+        build/release/frameviewer \
+        > /tmp/frameviewer-smoke.log 2>&1 || status=$? \
+    && { cat /tmp/frameviewer-smoke.log; test "$status" -eq 124; }
+
+RUN mkdir -p /artifacts \
+    && cp ./*.deb /artifacts/ \
+    && { \
+        printf 'Base image: ubuntu:24.04\n'; \
+        uname -m; \
+        cmake --version | head -1; \
+        c++ --version | head -1; \
+        dpkg-query -W \
+            -f='${Package} ${Version}\\n' \
+            qt6-base-dev qt6-declarative-dev libmpv-dev ffmpeg; \
+    } > /artifacts/ubuntu-24.04-amd64-build-info.txt \
+    && dpkg-deb --info ./*.deb \
+        > /artifacts/ubuntu-24.04-amd64-package-info.txt
+
+FROM scratch AS artifact
+COPY --from=build /artifacts/ /

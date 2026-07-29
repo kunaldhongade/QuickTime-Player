@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=FrameViewer
+Comment=Inspect video frame by frame
+Exec=frameviewer %f
+Icon=frameviewer
+Terminal=false
+Categories=AudioVideo;Video;Player;
+MimeType=video/mp4;video/quicktime;video/x-matroska;video/webm;video/x-msvideo;video/mpeg;
+StartupNotify=true
