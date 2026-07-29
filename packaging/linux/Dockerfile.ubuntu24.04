@@ -30,6 +30,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         qml6-module-qtqml \
         qml6-module-qtquick-templates \
+        libqt6svg6 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN cmake --preset debug \
@@ -45,7 +46,10 @@ RUN cmake --preset release \
         QT_QUICK_BACKEND=software \
         build/release/frameviewer \
         > /tmp/frameviewer-smoke.log 2>&1 || status=$? \
-    && { cat /tmp/frameviewer-smoke.log; test "$status" -eq 124; }
+    && { cat /tmp/frameviewer-smoke.log; test "$status" -eq 124; } \
+    && ! grep -Eq \
+        "Unsupported image format|failed to load component|plugin .* not found" \
+        /tmp/frameviewer-smoke.log
 
 RUN mkdir -p /artifacts \
     && cp ./*.deb /artifacts/ \
@@ -55,7 +59,7 @@ RUN mkdir -p /artifacts \
         cmake --version | head -1; \
         c++ --version | head -1; \
         dpkg-query -W \
-            -f='${Package} ${Version}\\n' \
+            -f='${Package} ${Version}\n' \
             qt6-base-dev qt6-declarative-dev libmpv-dev ffmpeg; \
     } > /artifacts/ubuntu-24.04-amd64-build-info.txt \
     && dpkg-deb --info ./*.deb \
