@@ -5,6 +5,7 @@
 #include <QStandardPaths>
 #include <QTimer>
 
+#include <algorithm>
 #include <cmath>
 
 Q_LOGGING_CATEGORY(frameIndexLog, "frameviewer.frames.indexer")
@@ -41,6 +42,10 @@ void FrameIndexer::start(const QString& mediaPath)
     m_pendingOutput.clear();
     m_standardError.clear();
     m_cancelling = false;
+    m_mediaDuration = 0.0;
+    m_lastProgress = -1.0;
+    m_firstTimestamp.reset();
+    m_progressTimer.start();
 
     emit started(m_generation);
 
@@ -76,14 +81,15 @@ void FrameIndexer::start(const QString& mediaPath)
     const QStringList arguments{
         QStringLiteral("-v"),
         QStringLiteral("error"),
+        QStringLiteral("-threads"),
+        QStringLiteral("0"),
         QStringLiteral("-select_streams"),
         QStringLiteral("V:0"),
         QStringLiteral("-show_frames"),
         QStringLiteral("-show_entries"),
-        QStringLiteral(
-            "frame=best_effort_timestamp_time,pts_time,pkt_duration_time,key_frame"),
+        QStringLiteral("frame=key_frame,best_effort_timestamp_time,pts_time"),
         QStringLiteral("-of"),
-        QStringLiteral("compact=p=0:nk=0"),
+        QStringLiteral("csv=p=0"),
         m_mediaPath,
     };
     qCInfo(frameIndexLog) << "Starting exact frame index for" << QFileInfo(m_mediaPath).fileName();
@@ -113,19 +119,34 @@ void FrameIndexer::cancel()
     emit cancelled(cancelledGeneration);
 }
 
+void FrameIndexer::setMediaDuration(double seconds)
+{
+    if (!std::isfinite(seconds) || seconds <= 0.0) {
+        return;
+    }
+    m_mediaDuration = seconds;
+    if (!m_workingIndex.isEmpty()) {
+        reportProgress(m_workingIndex.at(m_workingIndex.count() - 1).timestamp);
+    }
+}
+
 void FrameIndexer::consumeOutput()
 {
     if (!m_process) {
         return;
     }
     m_pendingOutput += m_process->readAllStandardOutput();
+    qsizetype lineStart = 0;
     qsizetype newline = -1;
-    while ((newline = m_pendingOutput.indexOf('\n')) >= 0) {
-        const QByteArray line = m_pendingOutput.left(newline).trimmed();
-        m_pendingOutput.remove(0, newline + 1);
+    while ((newline = m_pendingOutput.indexOf('\n', lineStart)) >= 0) {
+        const QByteArray line = m_pendingOutput.mid(lineStart, newline - lineStart).trimmed();
+        lineStart = newline + 1;
         if (!line.isEmpty()) {
             consumeLine(line);
         }
+    }
+    if (lineStart > 0) {
+        m_pendingOutput.remove(0, lineStart);
     }
 }
 
@@ -160,6 +181,7 @@ void FrameIndexer::processFinished(int exitCode, QProcess::ExitStatus status)
     if (!m_cache.save(m_mediaPath, m_workingIndex)) {
         qCWarning(frameIndexLog) << "Could not save the frame index cache";
     }
+    emit progressChanged(m_generation, 1.0);
     qCInfo(frameIndexLog) << "Frame index complete:" << m_workingIndex.count() << "frames";
     emit finished(m_generation, m_workingIndex, false);
 }
@@ -183,30 +205,17 @@ void FrameIndexer::consumeLine(const QByteArray& line)
 {
     std::optional<double> bestEffort;
     std::optional<double> presentation;
-    std::optional<double> duration;
-    bool keyframe = false;
-
-    for (const QByteArray& field : line.split('|')) {
-        const qsizetype equals = field.indexOf('=');
-        if (equals < 0) {
-            continue;
-        }
-        const QByteArray key = field.left(equals);
-        const QByteArray value = field.mid(equals + 1);
-        if (key == "best_effort_timestamp_time") {
-            bestEffort = parseNumber(value);
-        } else if (key == "pts_time") {
-            presentation = parseNumber(value);
-        } else if (key == "pkt_duration_time") {
-            duration = parseNumber(value);
-        } else if (key == "key_frame") {
-            keyframe = value == "1";
-        }
+    const QList<QByteArray> fields = line.split(',');
+    const bool keyframe = !fields.isEmpty() && fields.at(0) == "1";
+    if (fields.count() > 1) {
+        presentation = parseNumber(fields.at(1));
+    }
+    if (fields.count() > 2) {
+        bestEffort = parseNumber(fields.at(2));
     }
 
     FrameEntry entry;
     entry.keyframe = keyframe;
-    entry.duration = duration;
     entry.exactTimestamp = bestEffort.has_value() || presentation.has_value();
     if (bestEffort) {
         entry.timestamp = *bestEffort;
@@ -214,7 +223,14 @@ void FrameIndexer::consumeLine(const QByteArray& line)
         entry.timestamp = *presentation;
     } else if (!m_workingIndex.isEmpty()) {
         const FrameEntry& previous = m_workingIndex.at(m_workingIndex.count() - 1);
-        entry.timestamp = previous.timestamp + previous.duration.value_or(0.000001);
+        double fallbackDuration = previous.duration.value_or(0.000001);
+        if (m_workingIndex.count() > 1) {
+            fallbackDuration = std::max(
+                0.000001,
+                previous.timestamp
+                    - m_workingIndex.at(m_workingIndex.count() - 2).timestamp);
+        }
+        entry.timestamp = previous.timestamp + fallbackDuration;
     }
 
     if (!m_workingIndex.isEmpty()) {
@@ -227,6 +243,7 @@ void FrameIndexer::consumeLine(const QByteArray& line)
         }
     }
     m_workingIndex.append(entry);
+    reportProgress(entry.timestamp);
 }
 
 void FrameIndexer::completeFromCache(const FrameIndex& index, quint64 generation)
@@ -234,8 +251,31 @@ void FrameIndexer::completeFromCache(const FrameIndex& index, quint64 generation
     if (generation != m_generation || m_process) {
         return;
     }
+    emit progressChanged(generation, 1.0);
     qCInfo(frameIndexLog) << "Frame index cache hit:" << index.count() << "frames";
     emit finished(generation, index, true);
+}
+
+void FrameIndexer::reportProgress(double timestamp)
+{
+    if (!std::isfinite(timestamp)) {
+        return;
+    }
+    if (!m_firstTimestamp) {
+        m_firstTimestamp = timestamp;
+    }
+    if (m_mediaDuration <= 0.0) {
+        return;
+    }
+    const double elapsed = std::max(0.0, timestamp - *m_firstTimestamp);
+    const double progress = std::clamp(elapsed / m_mediaDuration, 0.0, 0.99);
+    if (m_lastProgress >= 0.0 && progress - m_lastProgress < 0.01
+        && m_progressTimer.elapsed() < 250) {
+        return;
+    }
+    m_lastProgress = progress;
+    m_progressTimer.restart();
+    emit progressChanged(m_generation, progress);
 }
 
 std::optional<double> FrameIndexer::parseNumber(const QByteArray& value)

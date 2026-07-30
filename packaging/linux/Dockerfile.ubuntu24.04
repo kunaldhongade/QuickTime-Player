@@ -24,7 +24,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /source
-COPY . .
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -34,6 +33,8 @@ RUN apt-get update \
         libqt6svg6 \
     && locale-gen de_DE.UTF-8 \
     && rm -rf /var/lib/apt/lists/*
+
+COPY . .
 
 RUN cmake --preset debug \
     && cmake --build --preset debug \

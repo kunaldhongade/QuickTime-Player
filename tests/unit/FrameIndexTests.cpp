@@ -1,8 +1,10 @@
+#include "files/MediaDirectoryNavigator.hpp"
 #include "frames/FrameIndex.hpp"
 #include "frames/FrameIndexCache.hpp"
 #include "frames/FramePositionResolver.hpp"
 
 #include <QFile>
+#include <QFileInfo>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
@@ -20,6 +22,7 @@ private slots:
     void nonZeroAndNegativeStarts();
     void oneFrameVideo();
     void cacheRoundTripAndInvalidation();
+    void navigatesSupportedVideosInNaturalOrder();
 
 private:
     static FrameIndex makeIndex(std::initializer_list<double> timestamps);
@@ -101,6 +104,33 @@ void FrameIndexTests::cacheRoundTripAndInvalidation()
     media.close();
     FrameIndex stale;
     QVERIFY(!cache.load(mediaPath, stale));
+}
+
+void FrameIndexTests::navigatesSupportedVideosInNaturalOrder()
+{
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    const QStringList names{
+        QStringLiteral("clip1.mp4"),
+        QStringLiteral("clip2.MOV"),
+        QStringLiteral("clip10.mkv"),
+        QStringLiteral("notes.txt"),
+    };
+    for (const QString& name : names) {
+        QFile file(directory.filePath(name));
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QCOMPARE(file.write("fixture"), 7);
+    }
+
+    MediaDirectoryNavigator navigator;
+    navigator.setCurrentFile(directory.filePath(QStringLiteral("clip2.MOV")));
+    QCOMPARE(navigator.files().count(), 3);
+    QCOMPARE(QFileInfo(navigator.previousPath()).fileName(), QStringLiteral("clip1.mp4"));
+    QCOMPARE(QFileInfo(navigator.nextPath()).fileName(), QStringLiteral("clip10.mkv"));
+    QVERIFY(navigator.canOpenPrevious());
+    QVERIFY(navigator.canOpenNext());
+    QVERIFY(!MediaDirectoryNavigator::isSupportedVideoFile(
+        directory.filePath(QStringLiteral("notes.txt"))));
 }
 
 FrameIndex FrameIndexTests::makeIndex(std::initializer_list<double> timestamps)

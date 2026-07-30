@@ -9,7 +9,7 @@ Item {
     property bool temporarilyVisible: true
     property bool pointerInside: panelHover.hovered
 
-    implicitHeight: 140
+    implicitHeight: 226
     opacity: controller.isPaused || temporarilyVisible || pointerInside ? 1 : 0
     enabled: opacity > 0.01
 
@@ -29,9 +29,9 @@ Item {
         id: hideTimer
         interval: 2000
         repeat: false
-        running: controller.isPlaying
+        running: root.controller.isPlaying
         onTriggered: {
-            if (controller.isPlaying && !root.pointerInside)
+            if (root.controller.isPlaying && !root.pointerInside)
                 root.temporarilyVisible = false
         }
     }
@@ -79,9 +79,40 @@ Item {
             anchors.fill: parent
             anchors.leftMargin: 22
             anchors.rightMargin: 22
-            anchors.topMargin: 15
-            anchors.bottomMargin: 16
-            spacing: 8
+            anchors.topMargin: 12
+            anchors.bottomMargin: 13
+            spacing: 7
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+
+                PanelButton {
+                    text: qsTr("Previous Video")
+                    enabled: root.controller.canOpenPreviousVideo
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Previous video in this folder (Ctrl+Left)")
+                    onClicked: root.controller.openPreviousVideo()
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    text: root.controller.filename
+                    color: "#d8d8da"
+                    font.pixelSize: 12
+                    font.weight: Font.Medium
+                    horizontalAlignment: Text.AlignHCenter
+                    elide: Text.ElideMiddle
+                }
+
+                PanelButton {
+                    text: qsTr("Next Video")
+                    enabled: root.controller.canOpenNextVideo
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Next video in this folder (Ctrl+Right)")
+                    onClicked: root.controller.openNextVideo()
+                }
+            }
 
             RowLayout {
                 Layout.alignment: Qt.AlignHCenter
@@ -144,12 +175,80 @@ Item {
                 }
             }
 
-            Label {
-                Layout.alignment: Qt.AlignHCenter
-                visible: root.controller.isIndexing
-                text: qsTr("Indexing frames…")
-                color: "#bfc0c2"
-                font.pixelSize: 11
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                PanelButton {
+                    text: qsTr("Set Start")
+                    enabled: root.controller.exactFrameIndexAvailable
+                    onClicked: root.controller.markRangeStart()
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    text: root.controller.rangeStartFrame <= 0
+                          ? qsTr("No frame range selected")
+                          : root.controller.rangeEndFrame <= 0
+                            ? qsTr("%1 F → set end").arg(root.controller.rangeStartFrame)
+                            : qsTr("%1 F → %2 F · %3 frames")
+                                .arg(root.controller.rangeStartFrame)
+                                .arg(root.controller.rangeEndFrame)
+                                .arg(root.controller.selectedFrameCount)
+                    color: root.controller.rangeStartFrame > 0 ? "#dcecff" : "#aeb0b3"
+                    font.pixelSize: 11
+                    horizontalAlignment: Text.AlignHCenter
+                    elide: Text.ElideRight
+                }
+
+                PanelButton {
+                    text: qsTr("Set End")
+                    enabled: root.controller.exactFrameIndexAvailable
+                             && root.controller.rangeStartFrame > 0
+                    onClicked: root.controller.markRangeEnd()
+                }
+
+                PanelButton {
+                    text: qsTr("Clear")
+                    visible: root.controller.rangeStartFrame > 0
+                    onClicked: root.controller.clearFrameRange()
+                }
+
+                PanelButton {
+                    text: root.controller.isExportingFrames
+                          ? qsTr("Export %1%")
+                                .arg(Math.round(root.controller.exportProgress * 100))
+                          : qsTr("Export PNGs")
+                    enabled: root.controller.canExportFrameRange
+                    onClicked: root.controller.exportFrameRange()
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                visible: root.controller.isIndexing || root.controller.isExportingFrames
+                spacing: 10
+
+                Label {
+                    text: root.controller.isExportingFrames
+                          ? qsTr("Saving selected frames…")
+                          : root.controller.indexingProgress > 0
+                            ? qsTr("Indexing frames… %1%")
+                                .arg(Math.round(root.controller.indexingProgress * 100))
+                            : qsTr("Indexing frames…")
+                    color: "#bfc0c2"
+                    font.pixelSize: 11
+                }
+
+                ProgressBar {
+                    Layout.fillWidth: true
+                    from: 0
+                    to: 1
+                    value: root.controller.isExportingFrames
+                           ? root.controller.exportProgress
+                           : root.controller.indexingProgress
+                    indeterminate: value <= 0
+                }
             }
         }
     }

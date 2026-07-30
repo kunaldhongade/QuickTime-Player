@@ -259,10 +259,10 @@ void MpvEngine::renderFrame(int framebuffer, int width, int height)
     }
 
     mpv_opengl_fbo framebufferDescription{framebuffer, width, height, 0};
-    int flipY = 1;
+    // Qt supplies an offscreen FBO here, not OpenGL's vertically inverted default
+    // framebuffer. Asking libmpv to flip this target produces an upside-down texture.
     mpv_render_param parameters[]{
         {MPV_RENDER_PARAM_OPENGL_FBO, &framebufferDescription},
-        {MPV_RENDER_PARAM_FLIP_Y, &flipY},
         {MPV_RENDER_PARAM_INVALID, nullptr},
     };
     mpv_render_context_update(m_renderContext);
