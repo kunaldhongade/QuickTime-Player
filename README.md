@@ -27,10 +27,11 @@ the same playback and indexing code is kept platform-neutral for macOS and Windo
 | Up / Down | Change volume by 5% |
 | S | Save the displayed video frame as PNG |
 
-Arrow-key auto-repeat is ignored. A distinct arrow tap made during playback pauses first and is
-serialized through the frame-step controller. Hold an arrow for about 320 ms to play at 1× in that
-direction; releasing it pauses again. Backward decoding depends on the source codec and may be
-less smooth than forward playback. Exact frame counters stay hidden until FFprobe has completed
+Arrow-key auto-repeat is ignored. Arrow taps are collected for 60 ms so rapid input becomes one
+renderer-confirmed move instead of a stale decoder backlog. Forward taps traverse the requested
+frames smoothly; reverse taps use the exact source index because libmpv's estimated reverse step
+can skip frames in variable-cadence video. Hold an arrow for about 320 ms to play at 1× in that
+direction; releasing it pauses again. Exact frame counters stay hidden until FFprobe has completed
 indexing.
 
 ## Frame-range export
@@ -120,8 +121,8 @@ Generate deterministic media fixtures with:
 - `FramePositionResolver` maps playback time to indexed presentation timestamps with binary
   search.
 - `PlaybackController` coalesces rapid frame moves toward the latest requested target, waits for
-  the renderer before updating the displayed counter, and corrects native mpv frame steps with
-  exact indexed seeks when required.
+  the renderer before updating the displayed counter, and uses exact indexed reverse seeks for
+  variable-cadence accuracy.
 - `ApplicationController` exposes a small typed state model and application commands to QML.
 
 ## Current packaging status

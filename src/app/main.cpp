@@ -2,6 +2,7 @@
 #include "rendering/MpvVideoItem.hpp"
 
 #include <QGuiApplication>
+#include <QIcon>
 #include <QImage>
 #include <QKeyEvent>
 #include <QQmlApplicationEngine>
@@ -26,6 +27,8 @@ int main(int argc, char* argv[])
     QCoreApplication::setOrganizationDomain(QStringLiteral("frameviewer.local"));
     QCoreApplication::setApplicationName(QStringLiteral("FrameViewer"));
     QCoreApplication::setApplicationVersion(QStringLiteral(FRAMEVIEWER_VERSION));
+    application.setWindowIcon(
+        QIcon(QStringLiteral(":/qt/qml/FrameViewer/assets/icons/icon.png")));
     QQuickStyle::setStyle(QStringLiteral("Basic"));
 
     qmlRegisterType<frameviewer::MpvVideoItem>(

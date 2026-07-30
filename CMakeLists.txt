@@ -66,6 +66,7 @@ qt_add_qml_module(frameviewer
     RESOURCES
         assets/icons/backward.svg
         assets/icons/forward.svg
+        assets/icons/icon.png
         assets/icons/open.svg
         assets/icons/pause.svg
         assets/icons/play.svg
@@ -111,8 +112,9 @@ if(UNIX AND NOT APPLE)
     install(FILES packaging/linux/frameviewer.desktop
         DESTINATION share/applications
     )
-    install(FILES packaging/linux/frameviewer.svg
-        DESTINATION share/icons/hicolor/scalable/apps
+    install(FILES assets/icons/icon.png
+        DESTINATION share/pixmaps
+        RENAME frameviewer.png
     )
     install(FILES README.md THIRD_PARTY_NOTICES.md
         DESTINATION share/doc/frameviewer
