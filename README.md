@@ -109,7 +109,8 @@ Generate deterministic media fixtures with:
 ## Architecture
 
 - `MpvEngine` owns the `mpv_handle`, observes playback properties, and transfers mpv callbacks
-  safely onto Qt's event loop.
+  safely onto Qt's event loop. It also reports when a newly decoded video frame has actually
+  reached the Qt render target.
 - `MpvVideoItem` and its renderer create the mpv OpenGL render context only while the Qt scene
   graph context is current.
 - `FrameIndexer` starts alongside media opening, incrementally parses compact FFprobe output in a
@@ -118,7 +119,8 @@ Generate deterministic media fixtures with:
   cache schema.
 - `FramePositionResolver` maps playback time to indexed presentation timestamps with binary
   search.
-- `PlaybackController` serializes requested frame moves and corrects native mpv frame steps with
+- `PlaybackController` coalesces rapid frame moves toward the latest requested target, waits for
+  the renderer before updating the displayed counter, and corrects native mpv frame steps with
   exact indexed seeks when required.
 - `ApplicationController` exposes a small typed state model and application commands to QML.
 
@@ -137,7 +139,7 @@ For a native Ubuntu 24.04 `amd64` package, run:
 
 ```bash
 ./scripts/package_deb_ubuntu.sh
-sudo apt install ./dist/frameviewer_0.2.2_amd64.deb
+sudo apt install ./dist/frameviewer_0.2.3_amd64.deb
 ```
 
 The `.deb` declares Ubuntu's Qt, libmpv, and FFmpeg packages as dynamic runtime dependencies;
