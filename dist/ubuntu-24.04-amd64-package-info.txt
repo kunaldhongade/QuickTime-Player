@@ -1,14 +1,14 @@
  new Debian package, version 2.0.
- size 106930 bytes: control archive=664 bytes.
+ size 154210 bytes: control archive=652 bytes.
      656 bytes,    10 lines      control
      372 bytes,     5 lines      md5sums
  Architecture: amd64
- Depends: ffmpeg, qml6-module-qtqml, qml6-module-qtqml-workerscript, qml6-module-qtquick, qml6-module-qtquick-controls, qml6-module-qtquick-dialogs, qml6-module-qtquick-layouts, qml6-module-qtquick-templates, libqt6svg6, libc6 (>= 2.34), libgcc-s1 (>= 3.0), libmpv2 (>= 0.29), libqt6core6t64 (>= 6.4.0), libqt6gui6t64 (>= 6.1.2), libqt6opengl6t64 (>= 6.1.2), libqt6qml6 (>= 6.4.0), libqt6quick6 (>= 6.2.0), libqt6quickcontrols2-6 (>= 6.2.0), libstdc++6 (>= 5)
+ Depends: ffmpeg, libqt6svg6, qml6-module-qtqml, qml6-module-qtqml-workerscript, qml6-module-qtquick, qml6-module-qtquick-controls, qml6-module-qtquick-dialogs, qml6-module-qtquick-layouts, qml6-module-qtquick-templates, libc6 (>= 2.34), libgcc-s1 (>= 3.0), libmpv2 (>= 0.29), libqt6core6t64 (>= 6.4.0), libqt6gui6t64 (>= 6.1.2), libqt6opengl6t64 (>= 6.1.2), libqt6qml6 (>= 6.4.0), libqt6quick6 (>= 6.2.0), libqt6quickcontrols2-6 (>= 6.2.0), libstdc++6 (>= 5)
  Description: Native frame-accurate Qt and libmpv video viewer
  Maintainer: FrameViewer
  Package: frameviewer
  Priority: optional
  Section: video
- Version: 0.1.0
- Installed-Size: 469
+ Version: 0.2.0
+ Installed-Size: 548
  

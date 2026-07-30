@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(FrameViewer VERSION 0.1.0 LANGUAGES CXX)
+project(FrameViewer VERSION 0.2.0 LANGUAGES CXX)
 
 option(FRAMEVIEWER_BUILD_TESTS "Build FrameViewer tests" ON)
 option(FRAMEVIEWER_ENABLE_SANITIZERS "Enable address and undefined behaviour sanitizers" OFF)
@@ -24,12 +24,16 @@ set(FRAMEVIEWER_SOURCES
     src/app/ApplicationController.cpp
     src/app/ApplicationController.hpp
     src/app/main.cpp
+    src/files/MediaDirectoryNavigator.cpp
+    src/files/MediaDirectoryNavigator.hpp
     src/frames/FrameIndex.cpp
     src/frames/FrameIndex.hpp
     src/frames/FrameIndexCache.cpp
     src/frames/FrameIndexCache.hpp
     src/frames/FrameIndexer.cpp
     src/frames/FrameIndexer.hpp
+    src/frames/FrameRangeExporter.cpp
+    src/frames/FrameRangeExporter.hpp
     src/frames/FramePositionResolver.cpp
     src/frames/FramePositionResolver.hpp
     src/models/PlayerState.hpp
@@ -52,6 +56,7 @@ qt_add_qml_module(frameviewer
         qml/VideoViewport.qml
         qml/PlaybackOverlay.qml
         qml/FrameSeekBar.qml
+        qml/PanelButton.qml
         qml/PlayerButton.qml
         qml/EmptyState.qml
         qml/ErrorView.qml

@@ -10,6 +10,8 @@
 #include <QStandardPaths>
 #include <QTimer>
 
+#include <algorithm>
+
 namespace frameviewer {
 
 ApplicationController::ApplicationController(QObject* parent)
@@ -17,6 +19,7 @@ ApplicationController::ApplicationController(QObject* parent)
     , m_engine(this)
     , m_playback(&m_engine, this)
     , m_indexer(this)
+    , m_exporter(this)
 {
     QGuiApplication::instance()->installEventFilter(this);
 
@@ -25,11 +28,8 @@ ApplicationController::ApplicationController(QObject* parent)
     });
     connect(&m_engine, &MpvEngine::fileLoaded, this, [this] {
         m_engine.setPaused(true);
-        m_indexing = true;
-        emit indexingChanged();
-        setState(PlayerState::Indexing);
-        m_indexer.start(m_currentPath);
-        m_indexGeneration = m_indexer.generation();
+        m_indexer.setMediaDuration(m_engine.duration());
+        updatePlaybackState();
         emit playerChanged();
     });
     connect(&m_engine, &MpvEngine::errorOccurred, this, [this](const QString& message) {
@@ -40,7 +40,10 @@ ApplicationController::ApplicationController(QObject* parent)
         emit playerChanged();
     });
     connect(&m_engine, &MpvEngine::timePositionChanged, this, &ApplicationController::playerChanged);
-    connect(&m_engine, &MpvEngine::durationChanged, this, &ApplicationController::playerChanged);
+    connect(&m_engine, &MpvEngine::durationChanged, this, [this] {
+        m_indexer.setMediaDuration(m_engine.duration());
+        emit playerChanged();
+    });
     connect(&m_engine, &MpvEngine::volumeChanged, this, &ApplicationController::playerChanged);
     connect(&m_engine, &MpvEngine::mutedChanged, this, &ApplicationController::playerChanged);
     connect(&m_engine, &MpvEngine::seekingChanged, this, &ApplicationController::playerChanged);
@@ -59,6 +62,16 @@ ApplicationController::ApplicationController(QObject* parent)
     });
 
     connect(&m_indexer,
+            &FrameIndexer::progressChanged,
+            this,
+            [this](quint64 generation, double progress) {
+                if (generation != m_indexGeneration) {
+                    return;
+                }
+                m_indexingProgress = std::clamp(progress, 0.0, 1.0);
+                emit indexingChanged();
+            });
+    connect(&m_indexer,
             &FrameIndexer::finished,
             this,
             [this](quint64 generation, const FrameIndex& index, bool) {
@@ -66,9 +79,11 @@ ApplicationController::ApplicationController(QObject* parent)
                     return;
                 }
                 m_indexing = false;
+                m_indexingProgress = 1.0;
                 m_playback.setFrameIndex(index);
                 emit indexingChanged();
                 emit frameChanged();
+                emit exportChanged();
                 updatePlaybackState();
             });
     connect(&m_indexer,
@@ -79,6 +94,7 @@ ApplicationController::ApplicationController(QObject* parent)
                     return;
                 }
                 m_indexing = false;
+                m_indexingProgress = 0.0;
                 emit indexingChanged();
                 updatePlaybackState();
                 emit toastRequested(tr("Frame indexing failed: %1").arg(message));
@@ -106,6 +122,42 @@ ApplicationController::ApplicationController(QObject* parent)
     });
     connect(&m_playback, &PlaybackController::seekFailed, this, [this](const QString& message) {
         emit toastRequested(message);
+    });
+
+    connect(&m_exporter,
+            &FrameRangeExporter::started,
+            this,
+            [this](qint64, const QString&) {
+                m_exportingFrames = true;
+                m_exportProgress = 0.0;
+                emit exportChanged();
+            });
+    connect(&m_exporter,
+            &FrameRangeExporter::progressChanged,
+            this,
+            [this](qint64 completed, qint64 total) {
+                m_exportProgress =
+                    total > 0 ? std::clamp(static_cast<double>(completed) / total, 0.0, 1.0)
+                              : 0.0;
+                emit exportChanged();
+            });
+    connect(&m_exporter,
+            &FrameRangeExporter::finished,
+            this,
+            [this](const QString& directory, qint64 exportedFrames) {
+                m_exportingFrames = false;
+                m_exportProgress = 1.0;
+                emit exportChanged();
+                emit toastRequested(
+                    tr("Exported %1 frames to %2")
+                        .arg(exportedFrames)
+                        .arg(QDir::toNativeSeparators(directory)));
+            });
+    connect(&m_exporter, &FrameRangeExporter::failed, this, [this](const QString& message) {
+        m_exportingFrames = false;
+        m_exportProgress = 0.0;
+        emit exportChanged();
+        emit toastRequested(tr("Frame export failed: %1").arg(message));
     });
 
     if (!m_engine.available()) {
@@ -156,7 +208,7 @@ bool ApplicationController::isIndexing() const
 
 double ApplicationController::indexingProgress() const
 {
-    return -1.0;
+    return m_indexing ? m_indexingProgress : 0.0;
 }
 
 qint64 ApplicationController::currentFrame() const
@@ -219,6 +271,49 @@ bool ApplicationController::exactFrameIndexAvailable() const
     return m_playback.exactFrameIndexAvailable();
 }
 
+bool ApplicationController::canOpenPreviousVideo() const
+{
+    return m_directoryNavigator.canOpenPrevious();
+}
+
+bool ApplicationController::canOpenNextVideo() const
+{
+    return m_directoryNavigator.canOpenNext();
+}
+
+qint64 ApplicationController::rangeStartFrame() const
+{
+    return m_rangeStartFrame;
+}
+
+qint64 ApplicationController::rangeEndFrame() const
+{
+    return m_rangeEndFrame;
+}
+
+qint64 ApplicationController::selectedFrameCount() const
+{
+    if (m_rangeStartFrame <= 0 || m_rangeEndFrame < m_rangeStartFrame) {
+        return 0;
+    }
+    return m_rangeEndFrame - m_rangeStartFrame + 1;
+}
+
+bool ApplicationController::canExportFrameRange() const
+{
+    return exactFrameIndexAvailable() && selectedFrameCount() > 0 && !m_exportingFrames;
+}
+
+bool ApplicationController::isExportingFrames() const
+{
+    return m_exportingFrames;
+}
+
+double ApplicationController::exportProgress() const
+{
+    return m_exportProgress;
+}
+
 void ApplicationController::setFullscreen(bool fullscreen)
 {
     if (m_fullscreen == fullscreen) {
@@ -246,6 +341,12 @@ bool ApplicationController::eventFilter(QObject* watched, QEvent* event)
         emit openDialogRequested();
     } else if (key == Qt::Key_Space) {
         togglePlayback();
+    } else if (key == Qt::Key_Left
+               && keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
+        openPreviousVideo();
+    } else if (key == Qt::Key_Right
+               && keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
+        openNextVideo();
     } else if (key == Qt::Key_Left) {
         stepFrames(keyEvent->modifiers().testFlag(Qt::ShiftModifier) ? -10 : -1);
     } else if (key == Qt::Key_Right) {
@@ -290,15 +391,22 @@ void ApplicationController::openFile(const QUrl& url)
 
     m_indexer.cancel();
     m_playback.clear();
-    m_indexing = false;
+    m_indexing = true;
+    m_indexingProgress = 0.0;
     m_errorMessage.clear();
     m_currentPath = information.absoluteFilePath();
     m_filename = information.fileName();
+    m_directoryNavigator.setCurrentFile(m_currentPath);
+    resetFrameRange();
     emit indexingChanged();
     emit errorChanged();
     emit filenameChanged();
+    emit folderNavigationChanged();
     emit frameChanged();
+    emit exportChanged();
     setState(PlayerState::Opening);
+    m_indexer.start(m_currentPath);
+    m_indexGeneration = m_indexer.generation();
     m_engine.loadFile(m_currentPath);
     reportUserActivity();
 }
@@ -373,6 +481,76 @@ void ApplicationController::saveCurrentFrame()
     });
 }
 
+void ApplicationController::openPreviousVideo()
+{
+    const QString path = m_directoryNavigator.previousPath();
+    if (!path.isEmpty()) {
+        openFile(QUrl::fromLocalFile(path));
+    }
+}
+
+void ApplicationController::openNextVideo()
+{
+    const QString path = m_directoryNavigator.nextPath();
+    if (!path.isEmpty()) {
+        openFile(QUrl::fromLocalFile(path));
+    }
+}
+
+void ApplicationController::markRangeStart()
+{
+    if (!exactFrameIndexAvailable() || currentFrame() <= 0) {
+        emit toastRequested(tr("Wait for frame indexing to finish before setting a marker."));
+        return;
+    }
+    m_rangeStartFrame = currentFrame();
+    if (m_rangeEndFrame > 0 && m_rangeEndFrame < m_rangeStartFrame) {
+        m_rangeEndFrame = 0;
+    }
+    emit frameRangeChanged();
+    emit exportChanged();
+    emit toastRequested(tr("Start frame set to %1.").arg(m_rangeStartFrame));
+}
+
+void ApplicationController::markRangeEnd()
+{
+    if (!exactFrameIndexAvailable() || currentFrame() <= 0) {
+        emit toastRequested(tr("Wait for frame indexing to finish before setting a marker."));
+        return;
+    }
+    if (m_rangeStartFrame <= 0) {
+        emit toastRequested(tr("Set the start frame first."));
+        return;
+    }
+    if (currentFrame() < m_rangeStartFrame) {
+        emit toastRequested(tr("The end frame must be at or after frame %1.")
+                                .arg(m_rangeStartFrame));
+        return;
+    }
+    m_rangeEndFrame = currentFrame();
+    emit frameRangeChanged();
+    emit exportChanged();
+    emit toastRequested(tr("End frame set to %1.").arg(m_rangeEndFrame));
+}
+
+void ApplicationController::clearFrameRange()
+{
+    if (m_rangeStartFrame == 0 && m_rangeEndFrame == 0) {
+        return;
+    }
+    resetFrameRange();
+    emit toastRequested(tr("Frame selection cleared."));
+}
+
+void ApplicationController::exportFrameRange()
+{
+    if (!canExportFrameRange()) {
+        emit toastRequested(tr("Set both a start and end frame before exporting."));
+        return;
+    }
+    m_exporter.start(m_currentPath, m_rangeStartFrame, m_rangeEndFrame);
+}
+
 void ApplicationController::clearError()
 {
     if (m_errorMessage.isEmpty()) {
@@ -402,6 +580,12 @@ void ApplicationController::setError(const QString& message, bool fatal)
     m_errorMessage = message;
     emit errorChanged();
     if (fatal) {
+        m_indexer.cancel();
+        if (m_indexing) {
+            m_indexing = false;
+            m_indexingProgress = 0.0;
+            emit indexingChanged();
+        }
         setState(PlayerState::Error);
     }
 }
@@ -409,7 +593,11 @@ void ApplicationController::setError(const QString& message, bool fatal)
 void ApplicationController::updatePlaybackState()
 {
     if (!hasMedia()) {
-        setState(m_errorMessage.isEmpty() ? PlayerState::Empty : PlayerState::Error);
+        if (!m_errorMessage.isEmpty()) {
+            setState(PlayerState::Error);
+        } else {
+            setState(m_currentPath.isEmpty() ? PlayerState::Empty : PlayerState::Opening);
+        }
     } else if (m_controllerSeeking || m_engine.seeking()) {
         setState(PlayerState::Seeking);
     } else if (m_indexing) {
@@ -421,6 +609,14 @@ void ApplicationController::updatePlaybackState()
     } else {
         setState(PlayerState::Playing);
     }
+}
+
+void ApplicationController::resetFrameRange()
+{
+    m_rangeStartFrame = 0;
+    m_rangeEndFrame = 0;
+    emit frameRangeChanged();
+    emit exportChanged();
 }
 
 QString ApplicationController::nextScreenshotPath() const

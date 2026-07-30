@@ -1,6 +1,8 @@
 #pragma once
 
+#include "files/MediaDirectoryNavigator.hpp"
 #include "frames/FrameIndexer.hpp"
+#include "frames/FrameRangeExporter.hpp"
 #include "models/PlayerState.hpp"
 #include "playback/MpvEngine.hpp"
 #include "playback/PlaybackController.hpp"
@@ -33,6 +35,15 @@ class ApplicationController final : public QObject {
     Q_PROPERTY(bool canStepForward READ canStepForward NOTIFY frameChanged)
     Q_PROPERTY(bool fullscreen READ fullscreen WRITE setFullscreen NOTIFY fullscreenChanged)
     Q_PROPERTY(bool exactFrameIndexAvailable READ exactFrameIndexAvailable NOTIFY frameChanged)
+    Q_PROPERTY(bool canOpenPreviousVideo READ canOpenPreviousVideo
+                   NOTIFY folderNavigationChanged)
+    Q_PROPERTY(bool canOpenNextVideo READ canOpenNextVideo NOTIFY folderNavigationChanged)
+    Q_PROPERTY(qint64 rangeStartFrame READ rangeStartFrame NOTIFY frameRangeChanged)
+    Q_PROPERTY(qint64 rangeEndFrame READ rangeEndFrame NOTIFY frameRangeChanged)
+    Q_PROPERTY(qint64 selectedFrameCount READ selectedFrameCount NOTIFY frameRangeChanged)
+    Q_PROPERTY(bool canExportFrameRange READ canExportFrameRange NOTIFY exportChanged)
+    Q_PROPERTY(bool isExportingFrames READ isExportingFrames NOTIFY exportChanged)
+    Q_PROPERTY(double exportProgress READ exportProgress NOTIFY exportChanged)
 
 public:
     explicit ApplicationController(QObject* parent = nullptr);
@@ -58,6 +69,14 @@ public:
     [[nodiscard]] bool canStepForward() const;
     [[nodiscard]] bool fullscreen() const;
     [[nodiscard]] bool exactFrameIndexAvailable() const;
+    [[nodiscard]] bool canOpenPreviousVideo() const;
+    [[nodiscard]] bool canOpenNextVideo() const;
+    [[nodiscard]] qint64 rangeStartFrame() const;
+    [[nodiscard]] qint64 rangeEndFrame() const;
+    [[nodiscard]] qint64 selectedFrameCount() const;
+    [[nodiscard]] bool canExportFrameRange() const;
+    [[nodiscard]] bool isExportingFrames() const;
+    [[nodiscard]] double exportProgress() const;
 
     void setFullscreen(bool fullscreen);
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -71,6 +90,12 @@ public:
     Q_INVOKABLE void toggleMute();
     Q_INVOKABLE void changeVolume(double delta);
     Q_INVOKABLE void saveCurrentFrame();
+    Q_INVOKABLE void openPreviousVideo();
+    Q_INVOKABLE void openNextVideo();
+    Q_INVOKABLE void markRangeStart();
+    Q_INVOKABLE void markRangeEnd();
+    Q_INVOKABLE void clearFrameRange();
+    Q_INVOKABLE void exportFrameRange();
     Q_INVOKABLE void clearError();
     Q_INVOKABLE void reportUserActivity();
 
@@ -82,6 +107,9 @@ signals:
     void filenameChanged();
     void errorChanged();
     void fullscreenChanged();
+    void folderNavigationChanged();
+    void frameRangeChanged();
+    void exportChanged();
     void openDialogRequested();
     void fullscreenRequested(bool fullscreen);
     void userActivity();
@@ -91,19 +119,27 @@ private:
     void setState(PlayerState::Value state);
     void setError(const QString& message, bool fatal);
     void updatePlaybackState();
+    void resetFrameRange();
     [[nodiscard]] QString nextScreenshotPath() const;
 
     MpvEngine m_engine;
     PlaybackController m_playback;
     FrameIndexer m_indexer;
+    FrameRangeExporter m_exporter;
+    MediaDirectoryNavigator m_directoryNavigator;
     PlayerState::Value m_state = PlayerState::Empty;
     QString m_currentPath;
     QString m_filename;
     QString m_errorMessage;
     quint64 m_indexGeneration = 0;
     bool m_indexing = false;
+    double m_indexingProgress = 0.0;
     bool m_controllerSeeking = false;
     bool m_fullscreen = false;
+    qint64 m_rangeStartFrame = 0;
+    qint64 m_rangeEndFrame = 0;
+    bool m_exportingFrames = false;
+    double m_exportProgress = 0.0;
 };
 
 } // namespace frameviewer

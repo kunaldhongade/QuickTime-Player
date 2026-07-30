@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
-import QtQuick.Layouts
 import FrameViewer.Native
 
 ApplicationWindow {
@@ -120,7 +119,7 @@ ApplicationWindow {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: window.visibility === Window.FullScreen ? 36 : 28
-        width: Math.min(552, parent.width - 32)
+        width: Math.min(700, parent.width - 32)
         controller: appController
         visible: appController.hasMedia
     }

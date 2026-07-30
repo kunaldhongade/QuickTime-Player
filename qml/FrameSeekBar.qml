@@ -62,6 +62,25 @@ Slider {
             radius: parent.radius
             color: root.enabled ? "#f5f5f5" : "#6ff5f5f5"
         }
+
+        Rectangle {
+            readonly property real firstPosition: root.controller.totalFrames > 1
+                ? (root.controller.rangeStartFrame - 1)
+                    / (root.controller.totalFrames - 1)
+                : 0
+            readonly property real lastPosition: root.controller.totalFrames > 1
+                ? (root.controller.rangeEndFrame - 1)
+                    / (root.controller.totalFrames - 1)
+                : 1
+
+            visible: root.controller.rangeStartFrame > 0
+                     && root.controller.rangeEndFrame >= root.controller.rangeStartFrame
+            x: Math.max(0, firstPosition * parent.width)
+            width: Math.max(5, (lastPosition - firstPosition) * parent.width)
+            height: parent.height
+            radius: parent.radius
+            color: "#5fa8ff"
+        }
     }
 
     handle: Rectangle {

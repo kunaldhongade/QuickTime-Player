@@ -1,5 +1,6 @@
 qt_add_executable(frameviewer_unit_tests
     unit/FrameIndexTests.cpp
+    ../src/files/MediaDirectoryNavigator.cpp
     ../src/frames/FrameIndex.cpp
     ../src/frames/FrameIndexCache.cpp
     ../src/frames/FramePositionResolver.cpp
@@ -13,6 +14,7 @@ qt_add_executable(frameviewer_indexer_tests
     ../src/frames/FrameIndex.cpp
     ../src/frames/FrameIndexCache.cpp
     ../src/frames/FrameIndexer.cpp
+    ../src/frames/FrameRangeExporter.cpp
 )
 target_include_directories(frameviewer_indexer_tests PRIVATE ../src)
 target_link_libraries(frameviewer_indexer_tests PRIVATE Qt6::Core Qt6::Test)

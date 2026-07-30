@@ -5,7 +5,8 @@ uses Qt 6 and QML for the interface, libmpv's Render API for playback inside a Q
 framebuffer, and FFprobe for an exact source-frame index.
 
 The current development build supports local video opening and drag-and-drop, play/pause,
-one-frame and ten-frame stepping, frame-based seeking, fullscreen, volume/mute, screenshots, and
+one-frame and ten-frame stepping, frame-based seeking, previous/next video navigation within the
+open file's folder, marked frame-range PNG export, fullscreen, volume/mute, screenshots, and
 cached exact frame counts. Linux is the first production target; the same playback and indexing
 code is kept platform-neutral for macOS and Windows.
 
@@ -16,6 +17,7 @@ code is kept platform-neutral for macOS and Windows.
 | Space | Play or pause |
 | Left / Right | Previous / next source frame |
 | Shift+Left / Shift+Right | Move 10 indexed frames |
+| Ctrl+Left / Ctrl+Right | Previous / next video in the current folder |
 | Home / End | First / final frame |
 | Ctrl+O or Command+O | Open a video |
 | F | Toggle fullscreen |
@@ -27,6 +29,26 @@ code is kept platform-neutral for macOS and Windows.
 Arrow-key auto-repeat is ignored. A distinct arrow press made during playback pauses first and is
 serialized through the frame-step controller. Exact frame counters stay hidden until FFprobe has
 completed indexing.
+
+## Frame-range export
+
+Pause on the first wanted frame and choose **Set Start**, move to the last wanted frame and choose
+**Set End**, then choose **Export PNGs**. The endpoints are inclusive: selecting frames 400
+through 700 writes 301 PNG files.
+
+The first export for `video.mp4` is written beside the source as:
+
+```text
+video/
+  video-frame-000400.png
+  video-frame-000401.png
+  …
+  video-frame-000700.png
+```
+
+If that output folder already contains files, FrameViewer creates `video-2`, `video-3`, and so on
+instead of overwriting an earlier export. FFmpeg performs the decoding in a background process,
+and the player remains usable while progress is displayed.
 
 ## Linux setup
 
@@ -87,7 +109,8 @@ Generate deterministic media fixtures with:
   safely onto Qt's event loop.
 - `MpvVideoItem` and its renderer create the mpv OpenGL render context only while the Qt scene
   graph context is current.
-- `FrameIndexer` incrementally parses FFprobe output in a cancellable `QProcess`.
+- `FrameIndexer` starts alongside media opening, incrementally parses compact FFprobe output in a
+  cancellable `QProcess`, and reports timestamp-based progress.
 - `FrameIndexCache` keys cached indexes by canonical path, size, modification time, stream, and
   cache schema.
 - `FramePositionResolver` maps playback time to indexed presentation timestamps with binary
@@ -111,7 +134,7 @@ For a native Ubuntu 24.04 `amd64` package, run:
 
 ```bash
 ./scripts/package_deb_ubuntu.sh
-sudo apt install ./dist/frameviewer_0.1.0_amd64.deb
+sudo apt install ./dist/frameviewer_0.2.0_amd64.deb
 ```
 
 The `.deb` declares Ubuntu's Qt, libmpv, and FFmpeg packages as dynamic runtime dependencies;
@@ -126,6 +149,8 @@ it does not bundle a second copy of those codec libraries.
 - Frame entries with missing timestamps use a marked fallback derived from the previous frame.
 - Timestamp-identical source frames cannot always be distinguished after an arbitrary exact seek;
   native frame-step remains the preferred path for adjacent frames.
+- A first exact index still requires FFprobe to scan every decoded source frame, so its duration is
+  proportional to video length and codec complexity. Reopening an unchanged file uses the cache.
 - Linux X11/Wayland, high-DPI, GPU-vendor, AppImage clean-room, and sanitizer acceptance passes
   must be run on Linux hardware before a production release.
 - Windows packaging and macOS signing/notarization have not started.

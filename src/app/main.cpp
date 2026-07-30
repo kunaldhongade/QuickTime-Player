@@ -11,11 +11,17 @@
 #include <QSGRendererInterface>
 #include <QTimer>
 
+#include <clocale>
+
 int main(int argc, char* argv[])
 {
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
 
     QGuiApplication application(argc, argv);
+    // Qt adopts the user's system locale on Unix, but libmpv requires the process-wide
+    // numeric C locale when mpv_create() is called. Restore it after Qt initializes and
+    // before ApplicationController constructs MpvEngine.
+    std::setlocale(LC_NUMERIC, "C");
     QCoreApplication::setOrganizationName(QStringLiteral("FrameViewer"));
     QCoreApplication::setOrganizationDomain(QStringLiteral("frameviewer.local"));
     QCoreApplication::setApplicationName(QStringLiteral("FrameViewer"));
