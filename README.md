@@ -15,7 +15,7 @@ code is kept platform-neutral for macOS and Windows.
 | Key | Action |
 |---|---|
 | Space | Play or pause |
-| Left / Right | Previous / next source frame |
+| Left / Right | Tap for one source frame; hold for reverse / forward playback at 1× |
 | Shift+Left / Shift+Right | Move 10 indexed frames |
 | Ctrl+Left / Ctrl+Right | Previous / next video in the current folder |
 | Home / End | First / final frame |
@@ -26,9 +26,11 @@ code is kept platform-neutral for macOS and Windows.
 | Up / Down | Change volume by 5% |
 | S | Save the displayed video frame as PNG |
 
-Arrow-key auto-repeat is ignored. A distinct arrow press made during playback pauses first and is
-serialized through the frame-step controller. Exact frame counters stay hidden until FFprobe has
-completed indexing.
+Arrow-key auto-repeat is ignored. A distinct arrow tap made during playback pauses first and is
+serialized through the frame-step controller. Hold an arrow for about 320 ms to play at 1× in that
+direction; releasing it pauses again. Backward decoding depends on the source codec and may be
+less smooth than forward playback. Exact frame counters stay hidden until FFprobe has completed
+indexing.
 
 ## Frame-range export
 
@@ -134,7 +136,7 @@ For a native Ubuntu 24.04 `amd64` package, run:
 
 ```bash
 ./scripts/package_deb_ubuntu.sh
-sudo apt install ./dist/frameviewer_0.2.0_amd64.deb
+sudo apt install ./dist/frameviewer_0.2.1_amd64.deb
 ```
 
 The `.deb` declares Ubuntu's Qt, libmpv, and FFmpeg packages as dynamic runtime dependencies;

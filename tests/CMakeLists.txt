@@ -4,6 +4,7 @@ qt_add_executable(frameviewer_unit_tests
     ../src/frames/FrameIndex.cpp
     ../src/frames/FrameIndexCache.cpp
     ../src/frames/FramePositionResolver.cpp
+    ../src/input/ArrowKeyGesture.cpp
 )
 target_include_directories(frameviewer_unit_tests PRIVATE ../src)
 target_link_libraries(frameviewer_unit_tests PRIVATE Qt6::Core Qt6::Test)

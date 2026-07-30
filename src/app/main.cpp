@@ -68,6 +68,33 @@ int main(int argc, char* argv[])
                                      2);
                 QCoreApplication::sendEvent(window, &autoRepeat);
             });
+            QTimer::singleShot(1600, window, [window] {
+                QKeyEvent release(QEvent::KeyRelease, Qt::Key_Right, Qt::NoModifier);
+                QCoreApplication::sendEvent(window, &release);
+            });
+        }
+        if (qEnvironmentVariableIsSet("FRAMEVIEWER_TEST_HOLD_RIGHT_KEY")) {
+            QTimer::singleShot(1200, window, [window] {
+                QKeyEvent press(QEvent::KeyPress, Qt::Key_Right, Qt::NoModifier);
+                QCoreApplication::sendEvent(window, &press);
+            });
+            QTimer::singleShot(2600, window, [window] {
+                QKeyEvent release(QEvent::KeyRelease, Qt::Key_Right, Qt::NoModifier);
+                QCoreApplication::sendEvent(window, &release);
+            });
+        }
+        if (qEnvironmentVariableIsSet("FRAMEVIEWER_TEST_HOLD_LEFT_KEY")) {
+            QTimer::singleShot(1000, window, [&controller] {
+                controller.seekToFrame(35);
+            });
+            QTimer::singleShot(1800, window, [window] {
+                QKeyEvent press(QEvent::KeyPress, Qt::Key_Left, Qt::NoModifier);
+                QCoreApplication::sendEvent(window, &press);
+            });
+            QTimer::singleShot(3200, window, [window] {
+                QKeyEvent release(QEvent::KeyRelease, Qt::Key_Left, Qt::NoModifier);
+                QCoreApplication::sendEvent(window, &release);
+            });
         }
         if (qEnvironmentVariableIsSet("FRAMEVIEWER_TEST_END_BOUNDARY")) {
             QTimer::singleShot(1500, window, [&controller] {

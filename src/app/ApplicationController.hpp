@@ -3,6 +3,7 @@
 #include "files/MediaDirectoryNavigator.hpp"
 #include "frames/FrameIndexer.hpp"
 #include "frames/FrameRangeExporter.hpp"
+#include "input/ArrowKeyGesture.hpp"
 #include "models/PlayerState.hpp"
 #include "playback/MpvEngine.hpp"
 #include "playback/PlaybackController.hpp"
@@ -120,12 +121,15 @@ private:
     void setError(const QString& message, bool fatal);
     void updatePlaybackState();
     void resetFrameRange();
+    void beginArrowShuttle(int direction);
+    void endArrowShuttle();
     [[nodiscard]] QString nextScreenshotPath() const;
 
     MpvEngine m_engine;
     PlaybackController m_playback;
     FrameIndexer m_indexer;
     FrameRangeExporter m_exporter;
+    ArrowKeyGesture m_arrowGesture;
     MediaDirectoryNavigator m_directoryNavigator;
     PlayerState::Value m_state = PlayerState::Empty;
     QString m_currentPath;
@@ -135,6 +139,7 @@ private:
     bool m_indexing = false;
     double m_indexingProgress = 0.0;
     bool m_controllerSeeking = false;
+    bool m_arrowShuttling = false;
     bool m_fullscreen = false;
     qint64 m_rangeStartFrame = 0;
     qint64 m_rangeEndFrame = 0;
