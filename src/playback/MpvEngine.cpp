@@ -156,6 +156,22 @@ void MpvEngine::setMuted(bool muted)
     setBooleanProperty("mute", muted);
 }
 
+void MpvEngine::setPlaybackSpeed(double speed)
+{
+    if (!m_mpv) {
+        return;
+    }
+    setDoubleProperty("speed", std::clamp(speed, 0.01, 100.0));
+}
+
+bool MpvEngine::setPlaybackDirection(bool backward)
+{
+    if (!m_mpv) {
+        return false;
+    }
+    return setStringProperty("play-direction", backward ? "backward" : "forward");
+}
+
 void MpvEngine::loadFile(const QString& path)
 {
     if (!m_mpv || path.isEmpty()) {
@@ -437,6 +453,17 @@ void MpvEngine::setDoubleProperty(const char* name, double value)
             tr("Could not change playback setting: %1")
                 .arg(QString::fromUtf8(mpv_error_string(result))));
     }
+}
+
+bool MpvEngine::setStringProperty(const char* name, const char* value)
+{
+    const int result = mpv_set_property_string(m_mpv, name, value);
+    if (result < 0) {
+        qCWarning(mpvLog) << "Could not change mpv property" << name
+                          << mpv_error_string(result);
+        return false;
+    }
+    return true;
 }
 
 void MpvEngine::updateBooleanProperty(const char* name, bool value)

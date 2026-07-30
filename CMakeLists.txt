@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(FrameViewer VERSION 0.2.0 LANGUAGES CXX)
+project(FrameViewer VERSION 0.2.2 LANGUAGES CXX)
 
 option(FRAMEVIEWER_BUILD_TESTS "Build FrameViewer tests" ON)
 option(FRAMEVIEWER_ENABLE_SANITIZERS "Enable address and undefined behaviour sanitizers" OFF)
@@ -36,6 +36,8 @@ set(FRAMEVIEWER_SOURCES
     src/frames/FrameRangeExporter.hpp
     src/frames/FramePositionResolver.cpp
     src/frames/FramePositionResolver.hpp
+    src/input/ArrowKeyGesture.cpp
+    src/input/ArrowKeyGesture.hpp
     src/models/PlayerState.hpp
     src/playback/MpvEngine.cpp
     src/playback/MpvEngine.hpp

@@ -68,6 +68,39 @@ int main(int argc, char* argv[])
                                      2);
                 QCoreApplication::sendEvent(window, &autoRepeat);
             });
+            QTimer::singleShot(1600, window, [window] {
+                QKeyEvent release(QEvent::KeyRelease, Qt::Key_Right, Qt::NoModifier);
+                QCoreApplication::sendEvent(window, &release);
+            });
+        }
+        if (qEnvironmentVariableIsSet("FRAMEVIEWER_TEST_HOLD_RIGHT_KEY")) {
+            QTimer::singleShot(1200, window, [window] {
+                QKeyEvent press(QEvent::KeyPress, Qt::Key_Right, Qt::NoModifier);
+                QCoreApplication::sendEvent(window, &press);
+            });
+            QTimer::singleShot(2600, window, [window] {
+                QKeyEvent release(QEvent::KeyRelease, Qt::Key_Right, Qt::NoModifier);
+                QCoreApplication::sendEvent(window, &release);
+            });
+        }
+        if (qEnvironmentVariableIsSet("FRAMEVIEWER_TEST_HOLD_LEFT_KEY")) {
+            QTimer::singleShot(1000, window, [&controller] {
+                controller.seekToFrame(35);
+            });
+            QTimer::singleShot(1800, window, [window] {
+                QKeyEvent press(QEvent::KeyPress, Qt::Key_Left, Qt::NoModifier);
+                QCoreApplication::sendEvent(window, &press);
+            });
+            QTimer::singleShot(3200, window, [window] {
+                QKeyEvent release(QEvent::KeyRelease, Qt::Key_Left, Qt::NoModifier);
+                QCoreApplication::sendEvent(window, &release);
+            });
+        }
+        if (qEnvironmentVariableIsSet("FRAMEVIEWER_TEST_HIDE_CONTROLS")) {
+            QTimer::singleShot(900, window, [window] {
+                QKeyEvent press(QEvent::KeyPress, Qt::Key_H, Qt::NoModifier);
+                QCoreApplication::sendEvent(window, &press);
+            });
         }
         if (qEnvironmentVariableIsSet("FRAMEVIEWER_TEST_END_BOUNDARY")) {
             QTimer::singleShot(1500, window, [&controller] {
@@ -86,7 +119,8 @@ int main(int argc, char* argv[])
                                    window->grabWindow().save(capturePath);
                                }
                                qInfo() << "Captured frame" << controller.currentFrame() << "of"
-                                       << controller.totalFrames();
+                                       << controller.totalFrames() << "controls visible"
+                                       << controller.controlsVisible();
                                if (qEnvironmentVariableIsSet("FRAMEVIEWER_CAPTURE_AND_EXIT")) {
                                    QCoreApplication::quit();
                                }

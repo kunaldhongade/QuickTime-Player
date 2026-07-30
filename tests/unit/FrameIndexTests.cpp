@@ -2,9 +2,11 @@
 #include "frames/FrameIndex.hpp"
 #include "frames/FrameIndexCache.hpp"
 #include "frames/FramePositionResolver.hpp"
+#include "input/ArrowKeyGesture.hpp"
 
 #include <QFile>
 #include <QFileInfo>
+#include <QSignalSpy>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
@@ -23,6 +25,10 @@ private slots:
     void oneFrameVideo();
     void cacheRoundTripAndInvalidation();
     void navigatesSupportedVideosInNaturalOrder();
+    void arrowTapRequestsOneStep();
+    void arrowHoldStartsAndStopsShuttle();
+    void arrowAutoRepeatIsIgnored();
+    void cancellingActiveArrowHoldStopsShuttle();
 
 private:
     static FrameIndex makeIndex(std::initializer_list<double> timestamps);
@@ -131,6 +137,75 @@ void FrameIndexTests::navigatesSupportedVideosInNaturalOrder()
     QVERIFY(navigator.canOpenNext());
     QVERIFY(!MediaDirectoryNavigator::isSupportedVideoFile(
         directory.filePath(QStringLiteral("notes.txt"))));
+}
+
+void FrameIndexTests::arrowTapRequestsOneStep()
+{
+    ArrowKeyGesture gesture;
+    QSignalSpy tapSpy(&gesture, &ArrowKeyGesture::tapRequested);
+    QSignalSpy holdSpy(&gesture, &ArrowKeyGesture::holdStarted);
+
+    gesture.press(1, false);
+    QVERIFY(gesture.isTracking());
+    gesture.release(1, false);
+
+    QCOMPARE(tapSpy.count(), 1);
+    QCOMPARE(tapSpy.constFirst().constFirst().toInt(), 1);
+    QCOMPARE(holdSpy.count(), 0);
+    QVERIFY(!gesture.isTracking());
+}
+
+void FrameIndexTests::arrowHoldStartsAndStopsShuttle()
+{
+    ArrowKeyGesture gesture;
+    gesture.setHoldThreshold(20);
+    QSignalSpy tapSpy(&gesture, &ArrowKeyGesture::tapRequested);
+    QSignalSpy startSpy(&gesture, &ArrowKeyGesture::holdStarted);
+    QSignalSpy finishSpy(&gesture, &ArrowKeyGesture::holdFinished);
+
+    gesture.press(-1, false);
+    QTRY_COMPARE_WITH_TIMEOUT(startSpy.count(), 1, 250);
+    QVERIFY(gesture.holdActive());
+    QCOMPARE(startSpy.constFirst().constFirst().toInt(), -1);
+
+    gesture.release(-1, false);
+    QCOMPARE(finishSpy.count(), 1);
+    QCOMPARE(finishSpy.constFirst().constFirst().toInt(), -1);
+    QCOMPARE(tapSpy.count(), 0);
+    QVERIFY(!gesture.isTracking());
+    QVERIFY(!gesture.holdActive());
+}
+
+void FrameIndexTests::arrowAutoRepeatIsIgnored()
+{
+    ArrowKeyGesture gesture;
+    QSignalSpy tapSpy(&gesture, &ArrowKeyGesture::tapRequested);
+    QSignalSpy startSpy(&gesture, &ArrowKeyGesture::holdStarted);
+    QSignalSpy finishSpy(&gesture, &ArrowKeyGesture::holdFinished);
+
+    gesture.press(1, true);
+    gesture.release(1, true);
+
+    QCOMPARE(tapSpy.count(), 0);
+    QCOMPARE(startSpy.count(), 0);
+    QCOMPARE(finishSpy.count(), 0);
+    QVERIFY(!gesture.isTracking());
+}
+
+void FrameIndexTests::cancellingActiveArrowHoldStopsShuttle()
+{
+    ArrowKeyGesture gesture;
+    gesture.setHoldThreshold(20);
+    QSignalSpy startSpy(&gesture, &ArrowKeyGesture::holdStarted);
+    QSignalSpy finishSpy(&gesture, &ArrowKeyGesture::holdFinished);
+
+    gesture.press(1, false);
+    QTRY_COMPARE_WITH_TIMEOUT(startSpy.count(), 1, 250);
+    gesture.cancel();
+
+    QCOMPARE(finishSpy.count(), 1);
+    QVERIFY(!gesture.isTracking());
+    QVERIFY(!gesture.holdActive());
 }
 
 FrameIndex FrameIndexTests::makeIndex(std::initializer_list<double> timestamps)

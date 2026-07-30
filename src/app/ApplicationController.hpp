@@ -3,6 +3,7 @@
 #include "files/MediaDirectoryNavigator.hpp"
 #include "frames/FrameIndexer.hpp"
 #include "frames/FrameRangeExporter.hpp"
+#include "input/ArrowKeyGesture.hpp"
 #include "models/PlayerState.hpp"
 #include "playback/MpvEngine.hpp"
 #include "playback/PlaybackController.hpp"
@@ -34,6 +35,8 @@ class ApplicationController final : public QObject {
     Q_PROPERTY(bool canStepBackward READ canStepBackward NOTIFY frameChanged)
     Q_PROPERTY(bool canStepForward READ canStepForward NOTIFY frameChanged)
     Q_PROPERTY(bool fullscreen READ fullscreen WRITE setFullscreen NOTIFY fullscreenChanged)
+    Q_PROPERTY(bool controlsVisible READ controlsVisible WRITE setControlsVisible
+                   NOTIFY controlsVisibilityChanged)
     Q_PROPERTY(bool exactFrameIndexAvailable READ exactFrameIndexAvailable NOTIFY frameChanged)
     Q_PROPERTY(bool canOpenPreviousVideo READ canOpenPreviousVideo
                    NOTIFY folderNavigationChanged)
@@ -68,6 +71,7 @@ public:
     [[nodiscard]] bool canStepBackward() const;
     [[nodiscard]] bool canStepForward() const;
     [[nodiscard]] bool fullscreen() const;
+    [[nodiscard]] bool controlsVisible() const;
     [[nodiscard]] bool exactFrameIndexAvailable() const;
     [[nodiscard]] bool canOpenPreviousVideo() const;
     [[nodiscard]] bool canOpenNextVideo() const;
@@ -79,6 +83,7 @@ public:
     [[nodiscard]] double exportProgress() const;
 
     void setFullscreen(bool fullscreen);
+    void setControlsVisible(bool visible);
     bool eventFilter(QObject* watched, QEvent* event) override;
 
     Q_INVOKABLE void openFile(const QUrl& url);
@@ -96,6 +101,7 @@ public:
     Q_INVOKABLE void markRangeEnd();
     Q_INVOKABLE void clearFrameRange();
     Q_INVOKABLE void exportFrameRange();
+    Q_INVOKABLE void toggleControlsVisibility();
     Q_INVOKABLE void clearError();
     Q_INVOKABLE void reportUserActivity();
 
@@ -107,6 +113,7 @@ signals:
     void filenameChanged();
     void errorChanged();
     void fullscreenChanged();
+    void controlsVisibilityChanged();
     void folderNavigationChanged();
     void frameRangeChanged();
     void exportChanged();
@@ -120,12 +127,15 @@ private:
     void setError(const QString& message, bool fatal);
     void updatePlaybackState();
     void resetFrameRange();
+    void beginArrowShuttle(int direction);
+    void endArrowShuttle();
     [[nodiscard]] QString nextScreenshotPath() const;
 
     MpvEngine m_engine;
     PlaybackController m_playback;
     FrameIndexer m_indexer;
     FrameRangeExporter m_exporter;
+    ArrowKeyGesture m_arrowGesture;
     MediaDirectoryNavigator m_directoryNavigator;
     PlayerState::Value m_state = PlayerState::Empty;
     QString m_currentPath;
@@ -135,7 +145,9 @@ private:
     bool m_indexing = false;
     double m_indexingProgress = 0.0;
     bool m_controllerSeeking = false;
+    bool m_arrowShuttling = false;
     bool m_fullscreen = false;
+    bool m_controlsVisible = true;
     qint64 m_rangeStartFrame = 0;
     qint64 m_rangeEndFrame = 0;
     bool m_exportingFrames = false;

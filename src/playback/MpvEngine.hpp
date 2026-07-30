@@ -46,6 +46,8 @@ public:
     void setPaused(bool paused);
     void setVolume(double volume);
     void setMuted(bool muted);
+    void setPlaybackSpeed(double speed);
+    [[nodiscard]] bool setPlaybackDirection(bool backward);
 
     Q_INVOKABLE void loadFile(const QString& path);
     Q_INVOKABLE void togglePause();
@@ -89,6 +91,7 @@ private:
     quint64 issueCommand(const QList<QByteArray>& arguments);
     void setBooleanProperty(const char* name, bool value);
     void setDoubleProperty(const char* name, double value);
+    [[nodiscard]] bool setStringProperty(const char* name, const char* value);
     void updateBooleanProperty(const char* name, bool value);
     void updateDoubleProperty(const char* name, double value);
     void updateStringProperty(const char* name, const QString& value);

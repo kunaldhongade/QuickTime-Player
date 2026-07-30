@@ -121,7 +121,7 @@ ApplicationWindow {
         anchors.bottomMargin: window.visibility === Window.FullScreen ? 36 : 28
         width: Math.min(700, parent.width - 32)
         controller: appController
-        visible: appController.hasMedia
+        visible: appController.hasMedia && appController.controlsVisible
     }
 
     Toast {

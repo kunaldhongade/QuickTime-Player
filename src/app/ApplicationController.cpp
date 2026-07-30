@@ -20,6 +20,7 @@ ApplicationController::ApplicationController(QObject* parent)
     , m_playback(&m_engine, this)
     , m_indexer(this)
     , m_exporter(this)
+    , m_arrowGesture(this)
 {
     QGuiApplication::instance()->installEventFilter(this);
 
@@ -159,6 +160,18 @@ ApplicationController::ApplicationController(QObject* parent)
         emit exportChanged();
         emit toastRequested(tr("Frame export failed: %1").arg(message));
     });
+    connect(&m_arrowGesture,
+            &ArrowKeyGesture::tapRequested,
+            this,
+            [this](int direction) { stepFrames(direction); });
+    connect(&m_arrowGesture,
+            &ArrowKeyGesture::holdStarted,
+            this,
+            &ApplicationController::beginArrowShuttle);
+    connect(&m_arrowGesture,
+            &ArrowKeyGesture::holdFinished,
+            this,
+            [this](int) { endArrowShuttle(); });
 
     if (!m_engine.available()) {
         setError(m_engine.initializationError(), true);
@@ -167,6 +180,7 @@ ApplicationController::ApplicationController(QObject* parent)
 
 ApplicationController::~ApplicationController()
 {
+    m_arrowGesture.cancel();
     QGuiApplication::instance()->removeEventFilter(this);
     m_indexer.cancel();
 }
@@ -266,6 +280,11 @@ bool ApplicationController::fullscreen() const
     return m_fullscreen;
 }
 
+bool ApplicationController::controlsVisible() const
+{
+    return m_controlsVisible;
+}
+
 bool ApplicationController::exactFrameIndexAvailable() const
 {
     return m_playback.exactFrameIndexAvailable();
@@ -323,16 +342,51 @@ void ApplicationController::setFullscreen(bool fullscreen)
     emit fullscreenChanged();
 }
 
+void ApplicationController::setControlsVisible(bool visible)
+{
+    if (m_controlsVisible == visible) {
+        return;
+    }
+    m_controlsVisible = visible;
+    emit controlsVisibilityChanged();
+}
+
 bool ApplicationController::eventFilter(QObject* watched, QEvent* event)
 {
     Q_UNUSED(watched)
+
+    if (event->type() == QEvent::ApplicationDeactivate
+        || event->type() == QEvent::WindowDeactivate) {
+        m_arrowGesture.cancel();
+        return false;
+    }
+
+    if (event->type() == QEvent::KeyRelease) {
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+        const int key = keyEvent->key();
+        if ((key == Qt::Key_Left || key == Qt::Key_Right) && m_arrowGesture.isTracking()) {
+            m_arrowGesture.release(key == Qt::Key_Left ? -1 : 1, keyEvent->isAutoRepeat());
+            keyEvent->accept();
+            return true;
+        }
+        return false;
+    }
+
     if (event->type() != QEvent::KeyPress || QGuiApplication::modalWindow()) {
+        if (QGuiApplication::modalWindow()) {
+            m_arrowGesture.cancel();
+        }
         return false;
     }
 
     auto* keyEvent = static_cast<QKeyEvent*>(event);
     const int key = keyEvent->key();
     if ((key == Qt::Key_Left || key == Qt::Key_Right) && keyEvent->isAutoRepeat()) {
+        keyEvent->accept();
+        return true;
+    }
+    if (key == Qt::Key_H && keyEvent->modifiers() == Qt::NoModifier
+        && keyEvent->isAutoRepeat()) {
         keyEvent->accept();
         return true;
     }
@@ -348,15 +402,28 @@ bool ApplicationController::eventFilter(QObject* watched, QEvent* event)
                && keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
         openNextVideo();
     } else if (key == Qt::Key_Left) {
-        stepFrames(keyEvent->modifiers().testFlag(Qt::ShiftModifier) ? -10 : -1);
+        if (keyEvent->modifiers().testFlag(Qt::ShiftModifier)) {
+            stepFrames(-10);
+        } else {
+            m_arrowGesture.press(-1, false);
+        }
     } else if (key == Qt::Key_Right) {
-        stepFrames(keyEvent->modifiers().testFlag(Qt::ShiftModifier) ? 10 : 1);
+        if (keyEvent->modifiers().testFlag(Qt::ShiftModifier)) {
+            stepFrames(10);
+        } else {
+            m_arrowGesture.press(1, false);
+        }
     } else if (key == Qt::Key_Home) {
         seekToFirstFrame();
     } else if (key == Qt::Key_End) {
         seekToLastFrame();
     } else if (key == Qt::Key_F) {
         emit fullscreenRequested(!m_fullscreen);
+    } else if (key == Qt::Key_H && keyEvent->modifiers() == Qt::NoModifier) {
+        if (!hasMedia()) {
+            return false;
+        }
+        toggleControlsVisibility();
     } else if (key == Qt::Key_Escape) {
         if (!m_fullscreen) {
             return false;
@@ -389,6 +456,7 @@ void ApplicationController::openFile(const QUrl& url)
         return;
     }
 
+    m_arrowGesture.cancel();
     m_indexer.cancel();
     m_playback.clear();
     m_indexing = true;
@@ -431,6 +499,51 @@ void ApplicationController::stepFrames(int count)
     }
     m_playback.stepBy(count);
     reportUserActivity();
+}
+
+void ApplicationController::beginArrowShuttle(int direction)
+{
+    if (!hasMedia()) {
+        return;
+    }
+    if (direction < 0 && exactFrameIndexAvailable() && !canStepBackward()) {
+        return;
+    }
+    if (direction > 0 && exactFrameIndexAvailable() && !canStepForward()) {
+        return;
+    }
+
+    m_engine.setPaused(true);
+    m_engine.setPlaybackSpeed(1.0);
+    if (!m_engine.setPlaybackDirection(direction < 0)) {
+        if (direction < 0) {
+            emit toastRequested(tr("Reverse playback is unavailable with this libmpv version."));
+        }
+        return;
+    }
+    m_arrowShuttling = true;
+    m_engine.setPaused(false);
+    emit playerChanged();
+    reportUserActivity();
+}
+
+void ApplicationController::endArrowShuttle()
+{
+    if (!m_arrowShuttling) {
+        return;
+    }
+    m_engine.setPaused(true);
+    static_cast<void>(m_engine.setPlaybackDirection(false));
+    m_engine.setPlaybackSpeed(1.0);
+    m_arrowShuttling = false;
+    updatePlaybackState();
+    emit playerChanged();
+    reportUserActivity();
+}
+
+void ApplicationController::toggleControlsVisibility()
+{
+    setControlsVisible(!m_controlsVisible);
 }
 
 void ApplicationController::seekToFrame(qint64 zeroBasedFrame)

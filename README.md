@@ -6,29 +6,32 @@ framebuffer, and FFprobe for an exact source-frame index.
 
 The current development build supports local video opening and drag-and-drop, play/pause,
 one-frame and ten-frame stepping, frame-based seeking, previous/next video navigation within the
-open file's folder, marked frame-range PNG export, fullscreen, volume/mute, screenshots, and
-cached exact frame counts. Linux is the first production target; the same playback and indexing
-code is kept platform-neutral for macOS and Windows.
+open file's folder, marked frame-range PNG export, a hideable control overlay, fullscreen,
+volume/mute, screenshots, and cached exact frame counts. Linux is the first production target;
+the same playback and indexing code is kept platform-neutral for macOS and Windows.
 
 ## Keyboard controls
 
 | Key | Action |
 |---|---|
 | Space | Play or pause |
-| Left / Right | Previous / next source frame |
+| Left / Right | Tap for one source frame; hold for reverse / forward playback at 1× |
 | Shift+Left / Shift+Right | Move 10 indexed frames |
 | Ctrl+Left / Ctrl+Right | Previous / next video in the current folder |
 | Home / End | First / final frame |
 | Ctrl+O or Command+O | Open a video |
 | F | Toggle fullscreen |
+| H | Hide or show the control overlay |
 | Escape | Leave fullscreen |
 | M | Toggle mute |
 | Up / Down | Change volume by 5% |
 | S | Save the displayed video frame as PNG |
 
-Arrow-key auto-repeat is ignored. A distinct arrow press made during playback pauses first and is
-serialized through the frame-step controller. Exact frame counters stay hidden until FFprobe has
-completed indexing.
+Arrow-key auto-repeat is ignored. A distinct arrow tap made during playback pauses first and is
+serialized through the frame-step controller. Hold an arrow for about 320 ms to play at 1× in that
+direction; releasing it pauses again. Backward decoding depends on the source codec and may be
+less smooth than forward playback. Exact frame counters stay hidden until FFprobe has completed
+indexing.
 
 ## Frame-range export
 
@@ -134,7 +137,7 @@ For a native Ubuntu 24.04 `amd64` package, run:
 
 ```bash
 ./scripts/package_deb_ubuntu.sh
-sudo apt install ./dist/frameviewer_0.2.0_amd64.deb
+sudo apt install ./dist/frameviewer_0.2.2_amd64.deb
 ```
 
 The `.deb` declares Ubuntu's Qt, libmpv, and FFmpeg packages as dynamic runtime dependencies;
