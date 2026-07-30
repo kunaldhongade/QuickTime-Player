@@ -127,10 +127,9 @@ void PlaybackController::stepBy(int frameCount)
     }
     m_requestedFrame = target;
     m_nativeTraversalRequested = std::abs(frameCount) == 1;
-    if (m_requestTimer.isActive()) {
-        return;
-    }
-    processRequestedTarget();
+    // Wait briefly for additional taps so rapid key travel is issued as one
+    // decoder operation instead of a queue of stale intermediate commands.
+    m_requestTimer.start();
 }
 
 void PlaybackController::seekToFrame(qint64 zeroBasedFrame)
@@ -228,11 +227,12 @@ void PlaybackController::processRequestedTarget()
         m_nativeTraversalRequested = false;
         return;
     }
-    const qsizetype requestedDelta = target - m_currentFrame;
-    const qsizetype operationTarget =
-        m_nativeTraversalRequested && requestedDelta < 0 ? m_currentFrame - 1 : target;
-    const qsizetype operationDelta = operationTarget - m_currentFrame;
-    beginTarget(operationTarget, m_nativeTraversalRequested, operationDelta);
+    const qsizetype operationDelta = target - m_currentFrame;
+    // libmpv's reverse frame-step uses an estimated seek and can skip source
+    // frames in variable-cadence video. Indexed exact seeks are deterministic
+    // in that direction; native multi-frame playback remains smooth forward.
+    const bool nativeStep = m_nativeTraversalRequested && operationDelta > 0;
+    beginTarget(target, nativeStep, operationDelta);
 }
 
 void PlaybackController::beginTarget(qsizetype target, bool useNativeStep, qsizetype delta)
@@ -327,7 +327,22 @@ qsizetype PlaybackController::resolvedPosition(double timePosition) const
         return -1;
     }
     const double streamTime = timePosition + m_index.at(0).timestamp;
-    return FramePositionResolver::resolve(m_index, streamTime, m_engine->endOfFile());
+    const qsizetype resolved =
+        FramePositionResolver::resolve(m_index, streamTime, m_engine->endOfFile());
+
+    // Some demuxers report time-pos a few hundred microseconds before the PTS
+    // requested by an exact seek. Apply that tolerance only when the adjacent
+    // indexed frame is already expected or displayed; a global offset would
+    // incorrectly skip the first frame of files with a non-zero start time.
+    constexpr double renderedTimestampTolerance = 0.0005;
+    const qsizetype anticipated = m_busy ? m_expectedFrame : m_currentFrame;
+    if (anticipated == resolved + 1 && anticipated < m_index.count()) {
+        const double distance = m_index.timestampForFrame(anticipated) - streamTime;
+        if (distance >= 0.0 && distance <= renderedTimestampTolerance) {
+            return anticipated;
+        }
+    }
+    return resolved;
 }
 
 double PlaybackController::engineTimestampFor(qsizetype frame) const

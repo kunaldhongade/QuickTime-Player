@@ -10,18 +10,20 @@ ColumnLayout {
 
     Rectangle {
         Layout.alignment: Qt.AlignHCenter
-        width: 58
-        height: 48
-        radius: 12
-        color: "#151515"
+        width: 82
+        height: 82
+        radius: 18
+        color: "#f5f3f0"
         border.width: 1
         border.color: "#2e2e2e"
+        clip: true
 
         Image {
-            anchors.centerIn: parent
-            width: 25
-            height: 25
-            source: Qt.resolvedUrl("../assets/icons/open.svg")
+            anchors.fill: parent
+            source: Qt.resolvedUrl("../assets/icons/icon.png")
+            fillMode: Image.PreserveAspectFit
+            smooth: true
+            mipmap: true
         }
     }
 
