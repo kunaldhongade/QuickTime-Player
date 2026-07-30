@@ -3,8 +3,9 @@
 #include "frames/FrameIndex.hpp"
 
 #include <QObject>
-#include <QQueue>
 #include <QTimer>
+
+#include <optional>
 
 namespace frameviewer {
 
@@ -48,25 +49,28 @@ signals:
     void seekFailed(const QString& message);
 
 private slots:
-    void positionChanged();
-    void playbackRestarted();
+    void renderedFrameChanged(double timePosition);
     void confirmationTimedOut();
 
 private:
-    void processQueue();
-    void beginTarget(qsizetype target, bool useNativeStep, int direction);
+    void processRequestedTarget();
+    void beginTarget(qsizetype target, bool useNativeStep, qsizetype delta);
     void confirmOrCorrect();
     void settleAt(qsizetype frame);
     [[nodiscard]] qsizetype resolvedEnginePosition() const;
+    [[nodiscard]] qsizetype resolvedPosition(double timePosition) const;
     [[nodiscard]] double engineTimestampFor(qsizetype frame) const;
     void publishCurrent(qsizetype frame);
 
     MpvEngine* m_engine = nullptr;
     FrameIndex m_index;
-    QQueue<int> m_pendingSteps;
     QTimer m_confirmationTimer;
+    QTimer m_requestTimer;
+    std::optional<double> m_lastRenderedPosition;
     qsizetype m_currentFrame = -1;
     qsizetype m_expectedFrame = -1;
+    qsizetype m_requestedFrame = -1;
+    bool m_nativeTraversalRequested = false;
     bool m_busy = false;
     bool m_correctiveSeekIssued = false;
 };

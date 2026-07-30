@@ -196,9 +196,10 @@ void MpvEngine::togglePause()
     setPaused(!m_paused);
 }
 
-void MpvEngine::frameStep()
+void MpvEngine::frameStep(qint64 frameCount)
 {
-    issueCommand({QByteArrayLiteral("frame-step")});
+    issueCommand(
+        {QByteArrayLiteral("frame-step"), QByteArray::number(std::max<qint64>(1, frameCount))});
 }
 
 void MpvEngine::frameBackStep()
@@ -274,6 +275,9 @@ void MpvEngine::renderFrame(int framebuffer, int width, int height)
         return;
     }
 
+    const bool rendersVideoFrame =
+        (mpv_render_context_update(m_renderContext) & MPV_RENDER_UPDATE_FRAME) != 0U;
+
     mpv_opengl_fbo framebufferDescription{framebuffer, width, height, 0};
     // Qt supplies an offscreen FBO here, not OpenGL's vertically inverted default
     // framebuffer. Asking libmpv to flip this target produces an upside-down texture.
@@ -281,8 +285,16 @@ void MpvEngine::renderFrame(int framebuffer, int width, int height)
         {MPV_RENDER_PARAM_OPENGL_FBO, &framebufferDescription},
         {MPV_RENDER_PARAM_INVALID, nullptr},
     };
-    mpv_render_context_update(m_renderContext);
-    mpv_render_context_render(m_renderContext, parameters);
+    const int renderResult = mpv_render_context_render(m_renderContext, parameters);
+    if (renderResult < 0) {
+        qCWarning(mpvLog) << "Could not render libmpv frame:"
+                          << mpv_error_string(renderResult);
+        return;
+    }
+    if (rendersVideoFrame) {
+        QMetaObject::invokeMethod(
+            this, &MpvEngine::publishRenderedFrame, Qt::QueuedConnection);
+    }
 }
 
 void MpvEngine::drainEvents()
@@ -505,6 +517,21 @@ void MpvEngine::updateStringProperty(const char* name, const QString& value)
         m_filename = value;
         emit filenameChanged();
     }
+}
+
+void MpvEngine::publishRenderedFrame()
+{
+    if (!m_mpv || m_shuttingDown.load()) {
+        return;
+    }
+
+    double renderedPosition = 0.0;
+    const int result =
+        mpv_get_property(m_mpv, "time-pos", MPV_FORMAT_DOUBLE, &renderedPosition);
+    if (result < 0 || !std::isfinite(renderedPosition)) {
+        return;
+    }
+    emit videoFrameRendered(renderedPosition);
 }
 
 void MpvEngine::shutdown()

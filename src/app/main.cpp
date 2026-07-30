@@ -73,6 +73,29 @@ int main(int argc, char* argv[])
                 QCoreApplication::sendEvent(window, &release);
             });
         }
+        if (qEnvironmentVariableIsSet("FRAMEVIEWER_TEST_RIGHT_BURST")) {
+            for (int step = 0; step < 12; ++step) {
+                QTimer::singleShot(1200 + step * 25, window, [window] {
+                    QKeyEvent press(QEvent::KeyPress, Qt::Key_Right, Qt::NoModifier);
+                    QCoreApplication::sendEvent(window, &press);
+                    QKeyEvent release(QEvent::KeyRelease, Qt::Key_Right, Qt::NoModifier);
+                    QCoreApplication::sendEvent(window, &release);
+                });
+            }
+        }
+        if (qEnvironmentVariableIsSet("FRAMEVIEWER_TEST_LEFT_BURST")) {
+            QTimer::singleShot(1000, window, [&controller] {
+                controller.seekToFrame(35);
+            });
+            for (int step = 0; step < 12; ++step) {
+                QTimer::singleShot(1800 + step * 25, window, [window] {
+                    QKeyEvent press(QEvent::KeyPress, Qt::Key_Left, Qt::NoModifier);
+                    QCoreApplication::sendEvent(window, &press);
+                    QKeyEvent release(QEvent::KeyRelease, Qt::Key_Left, Qt::NoModifier);
+                    QCoreApplication::sendEvent(window, &release);
+                });
+            }
+        }
         if (qEnvironmentVariableIsSet("FRAMEVIEWER_TEST_HOLD_RIGHT_KEY")) {
             QTimer::singleShot(1200, window, [window] {
                 QKeyEvent press(QEvent::KeyPress, Qt::Key_Right, Qt::NoModifier);

@@ -51,7 +51,7 @@ public:
 
     Q_INVOKABLE void loadFile(const QString& path);
     Q_INVOKABLE void togglePause();
-    void frameStep();
+    void frameStep(qint64 frameCount = 1);
     void frameBackStep();
     void seekExact(double timestamp);
     void takeScreenshot(const QString& path);
@@ -68,6 +68,7 @@ signals:
     void playbackEnded(int reason);
     void commandFinished(quint64 request, int error);
     void renderUpdateRequested();
+    void videoFrameRendered(double timePosition);
     void errorOccurred(const QString& message);
     void logMessage(const QString& prefix, const QString& level, const QString& text);
 
@@ -95,6 +96,7 @@ private:
     void updateBooleanProperty(const char* name, bool value);
     void updateDoubleProperty(const char* name, double value);
     void updateStringProperty(const char* name, const QString& value);
+    void publishRenderedFrame();
     void shutdown();
 
     mpv_handle* m_mpv = nullptr;
