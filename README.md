@@ -85,6 +85,8 @@ brew install cmake ninja qt mpv ffmpeg pkg-config
 ```
 
 This is a development path, not a signed or notarized macOS distribution.
+The macOS application bundle uses `assets/icons/icon.icns`; Linux launchers and the in-app
+empty state use `assets/icons/icon.png`.
 
 ## Build presets
 

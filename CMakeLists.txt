@@ -89,7 +89,16 @@ target_compile_definitions(frameviewer PRIVATE
 )
 
 if(APPLE)
-    set_target_properties(frameviewer PROPERTIES MACOSX_BUNDLE TRUE)
+    set_source_files_properties(assets/icons/icon.icns PROPERTIES
+        MACOSX_PACKAGE_LOCATION "Resources"
+    )
+    target_sources(frameviewer PRIVATE assets/icons/icon.icns)
+    set_target_properties(frameviewer PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_BUNDLE_NAME "FrameViewer"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.frameviewer.app"
+        MACOSX_BUNDLE_ICON_FILE "icon.icns"
+    )
 endif()
 
 if(FRAMEVIEWER_ENABLE_SANITIZERS AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
