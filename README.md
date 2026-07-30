@@ -111,7 +111,7 @@ For a native Ubuntu 24.04 `amd64` package, run:
 
 ```bash
 ./scripts/package_deb_ubuntu.sh
-sudo apt install ./dist/frameviewer_0.1.0_amd64.deb
+sudo apt install ./dist/frameviewer_0.1.1_amd64.deb
 ```
 
 The `.deb` declares Ubuntu's Qt, libmpv, and FFmpeg packages as dynamic runtime dependencies;

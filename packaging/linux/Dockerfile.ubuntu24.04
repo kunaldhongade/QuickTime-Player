@@ -28,9 +28,11 @@ COPY . .
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        locales \
         qml6-module-qtqml \
         qml6-module-qtquick-templates \
         libqt6svg6 \
+    && locale-gen de_DE.UTF-8 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN cmake --preset debug \
@@ -40,15 +42,19 @@ RUN cmake --preset debug \
 RUN cmake --preset release \
     && cmake --build --preset release \
     && cpack --config build/release/CPackConfig.cmake -G DEB \
+    && dpkg -i ./frameviewer_*_amd64.deb \
     && status=0 \
     && timeout 8 env \
+        LC_ALL=de_DE.UTF-8 \
+        LC_NUMERIC=de_DE.UTF-8 \
         QT_QPA_PLATFORM=offscreen \
         QT_QUICK_BACKEND=software \
-        build/release/frameviewer \
+        /usr/bin/frameviewer \
         > /tmp/frameviewer-smoke.log 2>&1 || status=$? \
     && { cat /tmp/frameviewer-smoke.log; test "$status" -eq 124; } \
+    && grep -q "libmpv client API" /tmp/frameviewer-smoke.log \
     && ! grep -Eq \
-        "Unsupported image format|failed to load component|plugin .* not found" \
+        "Unsupported image format|failed to load component|plugin .* not found|libmpv could not be created|libmpv initialization failed" \
         /tmp/frameviewer-smoke.log
 
 RUN mkdir -p /artifacts \

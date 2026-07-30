@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(FrameViewer VERSION 0.1.0 LANGUAGES CXX)
+project(FrameViewer VERSION 0.1.1 LANGUAGES CXX)
 
 option(FRAMEVIEWER_BUILD_TESTS "Build FrameViewer tests" ON)
 option(FRAMEVIEWER_ENABLE_SANITIZERS "Enable address and undefined behaviour sanitizers" OFF)
