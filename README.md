@@ -6,9 +6,9 @@ framebuffer, and FFprobe for an exact source-frame index.
 
 The current development build supports local video opening and drag-and-drop, play/pause,
 one-frame and ten-frame stepping, frame-based seeking, previous/next video navigation within the
-open file's folder, marked frame-range PNG export, fullscreen, volume/mute, screenshots, and
-cached exact frame counts. Linux is the first production target; the same playback and indexing
-code is kept platform-neutral for macOS and Windows.
+open file's folder, marked frame-range PNG export, a hideable control overlay, fullscreen,
+volume/mute, screenshots, and cached exact frame counts. Linux is the first production target;
+the same playback and indexing code is kept platform-neutral for macOS and Windows.
 
 ## Keyboard controls
 
@@ -21,6 +21,7 @@ code is kept platform-neutral for macOS and Windows.
 | Home / End | First / final frame |
 | Ctrl+O or Command+O | Open a video |
 | F | Toggle fullscreen |
+| H | Hide or show the control overlay |
 | Escape | Leave fullscreen |
 | M | Toggle mute |
 | Up / Down | Change volume by 5% |
@@ -136,7 +137,7 @@ For a native Ubuntu 24.04 `amd64` package, run:
 
 ```bash
 ./scripts/package_deb_ubuntu.sh
-sudo apt install ./dist/frameviewer_0.2.1_amd64.deb
+sudo apt install ./dist/frameviewer_0.2.2_amd64.deb
 ```
 
 The `.deb` declares Ubuntu's Qt, libmpv, and FFmpeg packages as dynamic runtime dependencies;

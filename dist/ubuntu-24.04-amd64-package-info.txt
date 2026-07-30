@@ -1,5 +1,5 @@
  new Debian package, version 2.0.
- size 158850 bytes: control archive=653 bytes.
+ size 159524 bytes: control archive=651 bytes.
      656 bytes,    10 lines      control
      372 bytes,     5 lines      md5sums
  Architecture: amd64
@@ -9,6 +9,6 @@
  Package: frameviewer
  Priority: optional
  Section: video
- Version: 0.2.1
- Installed-Size: 565
+ Version: 0.2.2
+ Installed-Size: 566
  

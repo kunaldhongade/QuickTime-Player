@@ -112,6 +112,13 @@ Item {
                     ToolTip.text: qsTr("Next video in this folder (Ctrl+Right)")
                     onClicked: root.controller.openNextVideo()
                 }
+
+                PanelButton {
+                    text: qsTr("Hide")
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Hide controls (H)")
+                    onClicked: root.controller.toggleControlsVisibility()
+                }
             }
 
             RowLayout {

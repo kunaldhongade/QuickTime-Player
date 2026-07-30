@@ -96,6 +96,12 @@ int main(int argc, char* argv[])
                 QCoreApplication::sendEvent(window, &release);
             });
         }
+        if (qEnvironmentVariableIsSet("FRAMEVIEWER_TEST_HIDE_CONTROLS")) {
+            QTimer::singleShot(900, window, [window] {
+                QKeyEvent press(QEvent::KeyPress, Qt::Key_H, Qt::NoModifier);
+                QCoreApplication::sendEvent(window, &press);
+            });
+        }
         if (qEnvironmentVariableIsSet("FRAMEVIEWER_TEST_END_BOUNDARY")) {
             QTimer::singleShot(1500, window, [&controller] {
                 controller.seekToLastFrame();
@@ -113,7 +119,8 @@ int main(int argc, char* argv[])
                                    window->grabWindow().save(capturePath);
                                }
                                qInfo() << "Captured frame" << controller.currentFrame() << "of"
-                                       << controller.totalFrames();
+                                       << controller.totalFrames() << "controls visible"
+                                       << controller.controlsVisible();
                                if (qEnvironmentVariableIsSet("FRAMEVIEWER_CAPTURE_AND_EXIT")) {
                                    QCoreApplication::quit();
                                }

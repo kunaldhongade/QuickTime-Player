@@ -280,6 +280,11 @@ bool ApplicationController::fullscreen() const
     return m_fullscreen;
 }
 
+bool ApplicationController::controlsVisible() const
+{
+    return m_controlsVisible;
+}
+
 bool ApplicationController::exactFrameIndexAvailable() const
 {
     return m_playback.exactFrameIndexAvailable();
@@ -337,6 +342,15 @@ void ApplicationController::setFullscreen(bool fullscreen)
     emit fullscreenChanged();
 }
 
+void ApplicationController::setControlsVisible(bool visible)
+{
+    if (m_controlsVisible == visible) {
+        return;
+    }
+    m_controlsVisible = visible;
+    emit controlsVisibilityChanged();
+}
+
 bool ApplicationController::eventFilter(QObject* watched, QEvent* event)
 {
     Q_UNUSED(watched)
@@ -371,6 +385,11 @@ bool ApplicationController::eventFilter(QObject* watched, QEvent* event)
         keyEvent->accept();
         return true;
     }
+    if (key == Qt::Key_H && keyEvent->modifiers() == Qt::NoModifier
+        && keyEvent->isAutoRepeat()) {
+        keyEvent->accept();
+        return true;
+    }
 
     if (keyEvent->matches(QKeySequence::Open)) {
         emit openDialogRequested();
@@ -400,6 +419,11 @@ bool ApplicationController::eventFilter(QObject* watched, QEvent* event)
         seekToLastFrame();
     } else if (key == Qt::Key_F) {
         emit fullscreenRequested(!m_fullscreen);
+    } else if (key == Qt::Key_H && keyEvent->modifiers() == Qt::NoModifier) {
+        if (!hasMedia()) {
+            return false;
+        }
+        toggleControlsVisibility();
     } else if (key == Qt::Key_Escape) {
         if (!m_fullscreen) {
             return false;
@@ -515,6 +539,11 @@ void ApplicationController::endArrowShuttle()
     updatePlaybackState();
     emit playerChanged();
     reportUserActivity();
+}
+
+void ApplicationController::toggleControlsVisibility()
+{
+    setControlsVisible(!m_controlsVisible);
 }
 
 void ApplicationController::seekToFrame(qint64 zeroBasedFrame)
