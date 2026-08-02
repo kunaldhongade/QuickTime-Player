@@ -117,9 +117,12 @@ void FrameIndexTests::navigatesSupportedVideosInNaturalOrder()
     QTemporaryDir directory;
     QVERIFY(directory.isValid());
     const QStringList names{
+        QStringLiteral("camera.mxf"),
         QStringLiteral("clip1.mp4"),
         QStringLiteral("clip2.MOV"),
         QStringLiteral("clip10.mkv"),
+        QStringLiteral("legacy.WMV"),
+        QStringLiteral("stream.hevc"),
         QStringLiteral("notes.txt"),
     };
     for (const QString& name : names) {
@@ -130,13 +133,23 @@ void FrameIndexTests::navigatesSupportedVideosInNaturalOrder()
 
     MediaDirectoryNavigator navigator;
     navigator.setCurrentFile(directory.filePath(QStringLiteral("clip2.MOV")));
-    QCOMPARE(navigator.files().count(), 3);
+    QCOMPARE(navigator.files().count(), 6);
     QCOMPARE(QFileInfo(navigator.previousPath()).fileName(), QStringLiteral("clip1.mp4"));
     QCOMPARE(QFileInfo(navigator.nextPath()).fileName(), QStringLiteral("clip10.mkv"));
     QVERIFY(navigator.canOpenPrevious());
     QVERIFY(navigator.canOpenNext());
     QVERIFY(!MediaDirectoryNavigator::isSupportedVideoFile(
         directory.filePath(QStringLiteral("notes.txt"))));
+    QVERIFY(MediaDirectoryNavigator::isSupportedVideoFile(
+        directory.filePath(QStringLiteral("camera.mxf"))));
+    QVERIFY(MediaDirectoryNavigator::isSupportedVideoFile(
+        directory.filePath(QStringLiteral("legacy.WMV"))));
+    QVERIFY(MediaDirectoryNavigator::isSupportedVideoFile(
+        directory.filePath(QStringLiteral("stream.hevc"))));
+    QVERIFY(MediaDirectoryNavigator::supportedFilePatterns().contains(
+        QStringLiteral("*.webm")));
+    QVERIFY(MediaDirectoryNavigator::supportedFilePatterns().contains(
+        QStringLiteral("*.mxf")));
 }
 
 void FrameIndexTests::arrowTapRequestsOneStep()

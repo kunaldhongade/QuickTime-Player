@@ -2,13 +2,22 @@
 
 FrameViewer is a small native desktop video player for accurate frame-by-frame inspection. It
 uses Qt 6 and QML for the interface, libmpv's Render API for playback inside a Qt-owned OpenGL
-framebuffer, and FFprobe for an exact source-frame index.
+framebuffer, and FFprobe for an exact source-frame index. Containers and codecs are decoded by
+the installed libmpv/FFmpeg stack, including H.264, H.265/HEVC, VP8, VP9, AV1, MPEG-2, MPEG-4,
+ProRes and common legacy formats when those decoders are present on the system.
 
 The current development build supports local video opening and drag-and-drop, play/pause,
 one-frame and ten-frame stepping, frame-based seeking, previous/next video navigation within the
 open file's folder, marked frame-range PNG export, a hideable control overlay, fullscreen,
 volume/mute, screenshots, and cached exact frame counts. Linux is the first production target;
 the same playback and indexing code is kept platform-neutral for macOS and Windows.
+
+The open dialog and folder navigation recognize common consumer, camera, professional and legacy
+containers and elementary streams such as MP4, MOV, MKV, WebM, AVI, MPEG/TS/M2TS, MXF, FLV,
+WMV/ASF, OGV, VOB, 3GP, DV, Y4M, H.264, HEVC, VP8, VP9 and AV1. **All files** remains available
+for formats that libmpv can probe by content. 4K and higher-resolution video uses libmpv's safe
+automatic hardware-decoding path when the operating system, GPU driver and codec support it, with
+software decoding as the fallback.
 
 ## Keyboard controls
 
@@ -142,7 +151,7 @@ For a native Ubuntu 24.04 `amd64` package, run:
 
 ```bash
 ./scripts/package_deb_ubuntu.sh
-sudo apt install ./dist/frameviewer_0.2.3_amd64.deb
+sudo apt install ./dist/frameviewer_0.2.4_amd64.deb
 ```
 
 The `.deb` declares Ubuntu's Qt, libmpv, and FFmpeg packages as dynamic runtime dependencies;

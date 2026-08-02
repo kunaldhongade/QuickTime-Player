@@ -6,5 +6,5 @@ Exec=frameviewer %f
 Icon=frameviewer
 Terminal=false
 Categories=AudioVideo;Video;Player;
-MimeType=video/mp4;video/quicktime;video/x-matroska;video/webm;video/x-msvideo;video/mpeg;
+MimeType=video/3gpp;video/3gpp2;video/mp2t;video/mp4;video/mpeg;video/ogg;video/quicktime;video/webm;video/x-flv;video/x-matroska;video/x-ms-asf;video/x-ms-wmv;video/x-msvideo;
 StartupNotify=true

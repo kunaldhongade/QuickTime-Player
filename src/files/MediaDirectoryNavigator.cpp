@@ -2,6 +2,7 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QMimeDatabase>
 #include <QStringView>
 
 #include <algorithm>
@@ -12,17 +13,54 @@ namespace {
 const QStringList& supportedSuffixes()
 {
     static const QStringList suffixes{
+        QStringLiteral("3g2"),
+        QStringLiteral("3gp"),
+        QStringLiteral("amv"),
+        QStringLiteral("asf"),
+        QStringLiteral("av1"),
         QStringLiteral("avi"),
+        QStringLiteral("bik"),
+        QStringLiteral("dav"),
+        QStringLiteral("divx"),
+        QStringLiteral("dv"),
+        QStringLiteral("dvr-ms"),
+        QStringLiteral("evo"),
+        QStringLiteral("f4v"),
+        QStringLiteral("flv"),
+        QStringLiteral("h264"),
+        QStringLiteral("h265"),
+        QStringLiteral("hevc"),
+        QStringLiteral("ivf"),
+        QStringLiteral("m1v"),
+        QStringLiteral("m2p"),
+        QStringLiteral("m2t"),
         QStringLiteral("m2ts"),
+        QStringLiteral("m2v"),
         QStringLiteral("m4v"),
+        QStringLiteral("mk3d"),
         QStringLiteral("mkv"),
         QStringLiteral("mov"),
         QStringLiteral("mp4"),
+        QStringLiteral("mpe"),
         QStringLiteral("mpeg"),
         QStringLiteral("mpg"),
+        QStringLiteral("mpv"),
         QStringLiteral("mts"),
+        QStringLiteral("mxf"),
+        QStringLiteral("nut"),
+        QStringLiteral("ogm"),
+        QStringLiteral("ogv"),
+        QStringLiteral("qt"),
+        QStringLiteral("rm"),
+        QStringLiteral("rmvb"),
+        QStringLiteral("roq"),
         QStringLiteral("ts"),
+        QStringLiteral("vob"),
+        QStringLiteral("vp8"),
+        QStringLiteral("vp9"),
         QStringLiteral("webm"),
+        QStringLiteral("wmv"),
+        QStringLiteral("y4m"),
     };
     return suffixes;
 }
@@ -151,7 +189,32 @@ qsizetype MediaDirectoryNavigator::currentIndex() const
 
 bool MediaDirectoryNavigator::isSupportedVideoFile(const QString& path)
 {
-    return supportedSuffixes().contains(QFileInfo(path).suffix().toLower());
+    const QFileInfo information(path);
+    if (supportedSuffixes().contains(information.suffix().toLower())) {
+        return true;
+    }
+    if (!information.exists() || !information.isFile() || !information.isReadable()) {
+        return false;
+    }
+
+    // libmpv/FFmpeg probe file contents rather than requiring an extension. Match that
+    // behaviour for extensionless or unusually named files in folder navigation.
+    const QMimeType mime = QMimeDatabase().mimeTypeForFile(
+        information.absoluteFilePath(), QMimeDatabase::MatchContent);
+    return mime.name().startsWith(QStringLiteral("video/"));
+}
+
+const QStringList& MediaDirectoryNavigator::supportedFilePatterns()
+{
+    static const QStringList patterns = [] {
+        QStringList result;
+        result.reserve(supportedSuffixes().count());
+        for (const QString& suffix : supportedSuffixes()) {
+            result.append(QStringLiteral("*.%1").arg(suffix));
+        }
+        return result;
+    }();
+    return patterns;
 }
 
 } // namespace frameviewer
