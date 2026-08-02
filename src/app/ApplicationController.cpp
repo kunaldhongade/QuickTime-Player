@@ -260,6 +260,12 @@ QString ApplicationController::filename() const
     return m_filename;
 }
 
+QString ApplicationController::videoFileFilter() const
+{
+    return tr("Video files (%1)")
+        .arg(MediaDirectoryNavigator::supportedFilePatterns().join(QChar(u' ')));
+}
+
 QString ApplicationController::errorMessage() const
 {
     return m_errorMessage;

@@ -17,6 +17,7 @@ public:
     [[nodiscard]] qsizetype currentIndex() const;
 
     [[nodiscard]] static bool isSupportedVideoFile(const QString& path);
+    [[nodiscard]] static const QStringList& supportedFilePatterns();
 
 private:
     QStringList m_files;

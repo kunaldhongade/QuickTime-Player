@@ -19,7 +19,7 @@ ApplicationWindow {
         title: qsTr("Open Video")
         fileMode: FileDialog.OpenFile
         nameFilters: [
-            qsTr("Video files (*.mp4 *.mov *.mkv *.webm *.avi *.m4v *.mpeg *.mpg *.ts *.mts)"),
+            appController.videoFileFilter,
             qsTr("All files (*)")
         ]
         onAccepted: appController.openFile(selectedFile)

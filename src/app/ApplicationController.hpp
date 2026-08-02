@@ -31,6 +31,7 @@ class ApplicationController final : public QObject {
     Q_PROPERTY(double volume READ volume NOTIFY playerChanged)
     Q_PROPERTY(bool muted READ muted NOTIFY playerChanged)
     Q_PROPERTY(QString filename READ filename NOTIFY filenameChanged)
+    Q_PROPERTY(QString videoFileFilter READ videoFileFilter CONSTANT)
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorChanged)
     Q_PROPERTY(bool canStepBackward READ canStepBackward NOTIFY frameChanged)
     Q_PROPERTY(bool canStepForward READ canStepForward NOTIFY frameChanged)
@@ -67,6 +68,7 @@ public:
     [[nodiscard]] double volume() const;
     [[nodiscard]] bool muted() const;
     [[nodiscard]] QString filename() const;
+    [[nodiscard]] QString videoFileFilter() const;
     [[nodiscard]] QString errorMessage() const;
     [[nodiscard]] bool canStepBackward() const;
     [[nodiscard]] bool canStepForward() const;
