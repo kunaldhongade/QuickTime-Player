@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 
-Rectangle {
+GlassPanel {
     id: root
 
     property string message: ""
@@ -12,13 +12,11 @@ Rectangle {
         hideTimer.restart()
     }
 
-    implicitWidth: Math.min(implicitLabelWidth + 32, 560)
-    implicitHeight: label.implicitHeight + 18
+    overMedia: true
+    implicitWidth: Math.min(implicitLabelWidth + 36, 560)
+    implicitHeight: label.implicitHeight + 20
     property real implicitLabelWidth: label.implicitWidth
-    radius: 10
-    color: "#e8232325"
-    border.width: 1
-    border.color: "#2dffffff"
+    radius: 12
     opacity: 0
     visible: opacity > 0
 
@@ -35,9 +33,9 @@ Rectangle {
     Label {
         id: label
         anchors.centerIn: parent
-        width: Math.min(implicitWidth, 528)
+        width: Math.min(implicitWidth, 524)
         text: root.message
-        color: "white"
+        color: Theme.mediaText
         font.pixelSize: 13
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.Wrap

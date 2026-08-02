@@ -6,7 +6,7 @@ framebuffer, and FFprobe for an exact source-frame index. Containers and codecs 
 the installed libmpv/FFmpeg stack, including H.264, H.265/HEVC, VP8, VP9, AV1, MPEG-2, MPEG-4,
 ProRes and common legacy formats when those decoders are present on the system.
 
-The current development build supports local video opening and drag-and-drop, play/pause,
+The current build supports local video opening and drag-and-drop, play/pause,
 one-frame and ten-frame stepping, frame-based seeking, previous/next video navigation within the
 open file's folder, marked frame-range PNG export, a hideable control overlay, fullscreen,
 volume/mute, screenshots, and cached exact frame counts. Linux is the first production target;
@@ -82,7 +82,22 @@ Native Wayland rendering does not use an X11 window ID or a child mpv window. Qt
 to its OpenGL backend before `QGuiApplication` is created, and libmpv renders into the
 `QQuickFramebufferObject` supplied by Qt.
 
-## macOS development
+## macOS
+
+The macOS application is a native document viewer with the correct `.icns` bundle icon and video
+file associations. Finder's **Open With** menu can launch FrameViewer for supported video types,
+including MP4, MOV, MKV, WebM, AVI, MPEG/TS, MXF, WMV and common elementary streams.
+
+On first launch, the setup assistant checks that the app was dragged to `/Applications` and offers
+an explicit **Make Default** action. macOS does not allow an installer to silently take over file
+types; the action is always initiated by the user, and Finder's **Get Info → Open with → Change
+All** remains available as the system fallback.
+
+The interface follows the system light/dark appearance. Floating video controls use a translucent,
+glossy material while content panels retain enough contrast for text and accessibility.
+
+To install a release DMG, open it, drag **FrameViewer** to **Applications**, then launch it from
+Applications. For development with Homebrew dependencies:
 
 With Homebrew dependencies installed:
 
@@ -93,9 +108,18 @@ brew install cmake ninja qt mpv ffmpeg pkg-config
 ./scripts/run.sh /path/to/video.mov
 ```
 
-This is a development path, not a signed or notarized macOS distribution.
 The macOS application bundle uses `assets/icons/icon.icns`; Linux launchers and the in-app
 empty state use `assets/icons/icon.png`.
+
+Maintainers can make a local ad-hoc QA installer with:
+
+```bash
+./scripts/package_macos.sh --development
+```
+
+That artifact is intentionally labelled development-only. Public DMGs must use an approved
+redistributable dependency set, a Developer ID signature, notarization and stapling; see
+`packaging/macos/README.md`.
 
 ## Build presets
 
@@ -138,7 +162,7 @@ Generate deterministic media fixtures with:
 
 ## Current packaging status
 
-AppImage packaging is deliberately gated. Before distributing binaries, record the exact Qt,
+Bundled macOS and AppImage packaging are deliberately gated. Before distributing binaries, record the exact Qt,
 mpv, and FFmpeg sources and build configurations in `THIRD_PARTY_NOTICES.md`, include their
 applicable license texts, and decide whether FFprobe will be bundled. The Homebrew FFmpeg build
 commonly used for development enables GPL components and must not silently become a distribution
@@ -170,7 +194,7 @@ it does not bundle a second copy of those codec libraries.
   proportional to video length and codec complexity. Reopening an unchanged file uses the cache.
 - Linux X11/Wayland, high-DPI, GPU-vendor, AppImage clean-room, and sanitizer acceptance passes
   must be run on Linux hardware before a production release.
-- Windows packaging and macOS signing/notarization have not started.
+- Windows MSI packaging and macOS public signing/notarization remain release-infrastructure work.
 
 ## Privacy
 

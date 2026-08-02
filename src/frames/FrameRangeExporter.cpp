@@ -1,10 +1,11 @@
 #include "frames/FrameRangeExporter.hpp"
 
+#include "platform/ExecutableLocator.hpp"
+
 #include <QDir>
 #include <QFileInfo>
 #include <QLoggingCategory>
 #include <QRegularExpression>
-#include <QStandardPaths>
 
 #include <algorithm>
 
@@ -43,7 +44,7 @@ void FrameRangeExporter::start(const QString& mediaPath, qint64 firstFrame, qint
         return;
     }
 
-    const QString ffmpeg = QStandardPaths::findExecutable(QStringLiteral("ffmpeg"));
+    const QString ffmpeg = locateExecutable(QStringLiteral("ffmpeg"));
     if (ffmpeg.isEmpty()) {
         emit failed(tr("FFmpeg was not found. Install FFmpeg or add it to PATH."));
         return;

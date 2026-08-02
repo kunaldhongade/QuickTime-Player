@@ -11,7 +11,7 @@ ApplicationWindow {
     minimumWidth: 640
     minimumHeight: 400
     visible: true
-    color: "black"
+    color: Theme.canvas
     title: appController.filename.length > 0 ? appController.filename : qsTr("FrameViewer")
 
     FileDialog {
@@ -47,10 +47,19 @@ ApplicationWindow {
 
     onVisibilityChanged: appController.fullscreen = window.visibility === Window.FullScreen
 
+    Rectangle {
+        anchors.fill: parent
+        gradient: Gradient {
+            GradientStop { position: 0; color: Theme.canvasTop }
+            GradientStop { position: 1; color: Theme.canvasBottom }
+        }
+    }
+
     VideoViewport {
         id: viewport
         anchors.fill: parent
         engine: appController.engine
+        visible: appController.hasMedia || appController.state === 1
     }
 
     MouseArea {
@@ -109,7 +118,7 @@ ApplicationWindow {
 
         Label {
             text: qsTr("Opening %1…").arg(appController.filename)
-            color: "#e8e8e8"
+            color: appController.hasMedia ? Theme.mediaText : Theme.textPrimary
             font.pixelSize: 15
         }
     }
@@ -129,5 +138,9 @@ ApplicationWindow {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: playbackOverlay.visible ? playbackOverlay.top : parent.bottom
         anchors.bottomMargin: 18
+    }
+
+    MacSetup {
+        controller: appController
     }
 }

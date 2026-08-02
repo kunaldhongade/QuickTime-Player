@@ -2,59 +2,64 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-ColumnLayout {
+GlassPanel {
     id: root
+
     signal openRequested()
 
-    spacing: 18
+    implicitWidth: 430
+    implicitHeight: 286
+    radius: 28
 
-    Rectangle {
-        Layout.alignment: Qt.AlignHCenter
-        width: 82
-        height: 82
-        radius: 18
-        color: "#f5f3f0"
-        border.width: 1
-        border.color: "#2e2e2e"
-        clip: true
+    ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 30
+        spacing: 16
 
-        Image {
-            anchors.fill: parent
-            source: Qt.resolvedUrl("../assets/icons/icon.png")
-            fillMode: Image.PreserveAspectFit
-            smooth: true
-            mipmap: true
+        Rectangle {
+            Layout.alignment: Qt.AlignHCenter
+            width: 92
+            height: 92
+            radius: 22
+            color: Theme.dark ? "#f4f3f0" : "#ffffff"
+            border.width: 1
+            border.color: Theme.glassBorder
+            clip: true
+
+            Image {
+                anchors.fill: parent
+                source: Qt.resolvedUrl("../assets/icons/icon.png")
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                mipmap: true
+            }
         }
-    }
 
-    Label {
-        Layout.alignment: Qt.AlignHCenter
-        text: Qt.platform.os === "osx"
-              ? qsTr("Drop a video here or press ⌘O")
-              : qsTr("Drop a video here or press Ctrl+O")
-        color: "#c9c9c9"
-        font.pixelSize: 16
-    }
-
-    Button {
-        Layout.alignment: Qt.AlignHCenter
-        text: qsTr("Open Video")
-        onClicked: root.openRequested()
-
-        contentItem: Text {
-            text: parent.text
-            color: "white"
-            font.pixelSize: 14
-            font.weight: Font.Medium
+        Label {
+            Layout.fillWidth: true
+            text: qsTr("FrameViewer")
+            color: Theme.textPrimary
+            font.pixelSize: 22
+            font.weight: Font.DemiBold
             horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
         }
 
-        background: Rectangle {
-            implicitWidth: 112
-            implicitHeight: 38
-            radius: 9
-            color: parent.down ? "#3277bf" : parent.hovered ? "#438ed7" : "#3a82cc"
+        Label {
+            Layout.fillWidth: true
+            text: Qt.platform.os === "osx"
+                  ? qsTr("Drop a video here or press ⌘O")
+                  : qsTr("Drop a video here or press Ctrl+O")
+            color: Theme.textSecondary
+            font.pixelSize: 14
+            horizontalAlignment: Text.AlignHCenter
+        }
+
+        PanelButton {
+            Layout.alignment: Qt.AlignHCenter
+            text: qsTr("Open Video")
+            mediaStyle: false
+            accent: true
+            onClicked: root.openRequested()
         }
     }
 }

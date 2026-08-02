@@ -28,20 +28,21 @@ Control {
         onTapped: root.clicked()
     }
 
-    background: Rectangle {
+    background: GlassPanel {
         radius: width / 2
-        color: !root.enabled
-               ? "transparent"
-               : root.down
-                 ? "#40ffffff"
-                 : root.hovered || root.visualFocus
-                   ? "#24ffffff"
-                   : "transparent"
+        overMedia: true
+        opacity: !root.enabled
+                 ? 0
+                 : root.down
+                   ? 0.88
+                   : root.hovered || root.visualFocus || root.prominent
+                     ? 0.62
+                     : 0
         border.width: root.visualFocus ? 2 : 0
         border.color: "#d8ffffff"
 
-        Behavior on color {
-            ColorAnimation { duration: 120 }
+        Behavior on opacity {
+            NumberAnimation { duration: 120 }
         }
     }
 

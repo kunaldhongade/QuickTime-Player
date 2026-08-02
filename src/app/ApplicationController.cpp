@@ -1,12 +1,17 @@
 #include "app/ApplicationController.hpp"
 
+#include "platform/MacPlatformIntegration.hpp"
+
 #include <QCoreApplication>
 #include <QDir>
+#include <QDesktopServices>
 #include <QFileInfo>
+#include <QFileOpenEvent>
 #include <QGuiApplication>
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QRegularExpression>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QTimer>
 
@@ -176,6 +181,14 @@ ApplicationController::ApplicationController(QObject* parent)
     if (!m_engine.available()) {
         setError(m_engine.initializationError(), true);
     }
+
+    if (macos::available()) {
+        QSettings settings;
+        m_macSetupVisible = !qEnvironmentVariableIsSet("FRAMEVIEWER_TEST_SKIP_SETUP")
+            && !settings.value(QStringLiteral("mac/setupCompleted"), false).toBool();
+        m_installedInApplications = macos::installedInApplications();
+        m_defaultVideoPlayer = macos::isDefaultVideoPlayer();
+    }
 }
 
 ApplicationController::~ApplicationController()
@@ -339,6 +352,26 @@ double ApplicationController::exportProgress() const
     return m_exportProgress;
 }
 
+bool ApplicationController::macOS() const
+{
+    return macos::available();
+}
+
+bool ApplicationController::macSetupVisible() const
+{
+    return m_macSetupVisible;
+}
+
+bool ApplicationController::installedInApplications() const
+{
+    return m_installedInApplications;
+}
+
+bool ApplicationController::defaultVideoPlayer() const
+{
+    return m_defaultVideoPlayer;
+}
+
 void ApplicationController::setFullscreen(bool fullscreen)
 {
     if (m_fullscreen == fullscreen) {
@@ -360,6 +393,18 @@ void ApplicationController::setControlsVisible(bool visible)
 bool ApplicationController::eventFilter(QObject* watched, QEvent* event)
 {
     Q_UNUSED(watched)
+
+    if (event->type() == QEvent::FileOpen) {
+        auto* openEvent = static_cast<QFileOpenEvent*>(event);
+        const QUrl url = !openEvent->file().isEmpty()
+                             ? QUrl::fromLocalFile(openEvent->file())
+                             : openEvent->url();
+        if (url.isValid()) {
+            openFile(url);
+            event->accept();
+            return true;
+        }
+    }
 
     if (event->type() == QEvent::ApplicationDeactivate
         || event->type() == QEvent::WindowDeactivate) {
@@ -683,6 +728,49 @@ void ApplicationController::clearError()
 void ApplicationController::reportUserActivity()
 {
     emit userActivity();
+}
+
+void ApplicationController::showMacSetup()
+{
+    if (!macos::available()) {
+        return;
+    }
+    m_installedInApplications = macos::installedInApplications();
+    m_defaultVideoPlayer = macos::isDefaultVideoPlayer();
+    m_macSetupVisible = true;
+    emit macSetupChanged();
+}
+
+void ApplicationController::finishMacSetup()
+{
+    if (!m_macSetupVisible) {
+        return;
+    }
+    QSettings settings;
+    settings.setValue(QStringLiteral("mac/setupCompleted"), true);
+    m_macSetupVisible = false;
+    emit macSetupChanged();
+}
+
+void ApplicationController::makeDefaultVideoPlayer()
+{
+    if (!macos::available()) {
+        return;
+    }
+    const QString error = macos::makeDefaultVideoPlayer();
+    m_installedInApplications = macos::installedInApplications();
+    m_defaultVideoPlayer = macos::isDefaultVideoPlayer();
+    emit macSetupChanged();
+    if (!error.isEmpty()) {
+        emit toastRequested(error);
+    } else {
+        emit toastRequested(tr("FrameViewer is now the default app for supported videos."));
+    }
+}
+
+void ApplicationController::openApplicationsFolder()
+{
+    QDesktopServices::openUrl(QUrl::fromLocalFile(QStringLiteral("/Applications")));
 }
 
 void ApplicationController::setState(PlayerState::Value state)
