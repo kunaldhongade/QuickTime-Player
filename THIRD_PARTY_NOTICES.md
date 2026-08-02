@@ -32,3 +32,12 @@ placeholder is replaced with the exact build that is being shipped.
 
 Applicable license texts must be placed under `LICENSES/` before packaging. Development package
 manager installations are not proof that a dependency combination is suitable for redistribution.
+
+## Local macOS QA snapshot (not approved for public redistribution)
+
+The ad-hoc development DMG built on 2026-08-02 used Qt 6.11.1, mpv 0.41.0 and Homebrew FFmpeg
+8.1.2 on Apple Silicon. Homebrew's FFmpeg formula enables GPL components, including x264/x265,
+so this snapshot is recorded for reproducibility only and must not be attached to a public release.
+`scripts/package_macos.sh` requires an explicit development flag for this combination and uses a
+different artifact name. Distribution mode separately requires an approved FFmpeg directory,
+completed license verification and a Developer ID identity.

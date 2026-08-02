@@ -1,4 +1,5 @@
 #include "app/ApplicationController.hpp"
+#include "platform/MacPlatformIntegration.hpp"
 #include "rendering/MpvVideoItem.hpp"
 
 #include <QGuiApplication>
@@ -49,6 +50,10 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
+    auto* rootWindow = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+    frameviewer::macos::registerApplicationBundle();
+    frameviewer::macos::configureWindow(rootWindow);
+
     if (application.arguments().count() > 1) {
         controller.openFile(QUrl::fromLocalFile(application.arguments().at(1)));
     }
@@ -58,7 +63,7 @@ int main(int argc, char* argv[])
     const QString capturePath =
         qEnvironmentVariable("FRAMEVIEWER_CAPTURE_PATH");
     if (!capturePath.isEmpty()) {
-        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        auto* window = rootWindow;
         if (qEnvironmentVariableIsSet("FRAMEVIEWER_TEST_RIGHT_KEY")) {
             QTimer::singleShot(1500, window, [window] {
                 QKeyEvent press(QEvent::KeyPress, Qt::Key_Right, Qt::NoModifier);

@@ -53,17 +53,15 @@ Item {
         anchors.fill: panel
         anchors.margins: -5
         radius: panel.radius + 5
-        color: "#4d000000"
-        opacity: 0.7
+        color: "#72000000"
+        opacity: 0.82
     }
 
-    Rectangle {
+    GlassPanel {
         id: panel
         anchors.fill: parent
-        radius: 19
-        color: "#d91c1d1f"
-        border.width: 1
-        border.color: "#33ffffff"
+        radius: 22
+        overMedia: true
 
         HoverHandler {
             id: panelHover
@@ -98,7 +96,7 @@ Item {
                 Label {
                     Layout.fillWidth: true
                     text: root.controller.filename
-                    color: "#d8d8da"
+                    color: Theme.mediaSecondary
                     font.pixelSize: 12
                     font.weight: Font.Medium
                     horizontalAlignment: Text.AlignHCenter
@@ -111,6 +109,14 @@ Item {
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Next video in this folder (Ctrl+Right)")
                     onClicked: root.controller.openNextVideo()
+                }
+
+                PanelButton {
+                    text: qsTr("Mac Setup")
+                    visible: root.controller.macOS
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Installation and default-app settings")
+                    onClicked: root.controller.showMacSetup()
                 }
 
                 PanelButton {
@@ -159,7 +165,7 @@ Item {
                     text: root.controller.exactFrameIndexAvailable
                           ? qsTr("%1 F").arg(root.controller.currentFrame)
                           : qsTr("— F")
-                    color: "#f2f2f2"
+                    color: Theme.mediaText
                     font.pixelSize: 13
                     font.weight: Font.Medium
                     horizontalAlignment: Text.AlignLeft
@@ -175,7 +181,7 @@ Item {
                     text: root.controller.exactFrameIndexAvailable
                           ? qsTr("%1 F").arg(root.controller.totalFrames)
                           : qsTr("— F")
-                    color: "#f2f2f2"
+                    color: Theme.mediaText
                     font.pixelSize: 13
                     font.weight: Font.Medium
                     horizontalAlignment: Text.AlignRight
@@ -202,7 +208,7 @@ Item {
                                 .arg(root.controller.rangeStartFrame)
                                 .arg(root.controller.rangeEndFrame)
                                 .arg(root.controller.selectedFrameCount)
-                    color: root.controller.rangeStartFrame > 0 ? "#dcecff" : "#aeb0b3"
+                    color: root.controller.rangeStartFrame > 0 ? "#dcecff" : Theme.mediaSecondary
                     font.pixelSize: 11
                     horizontalAlignment: Text.AlignHCenter
                     elide: Text.ElideRight
@@ -243,7 +249,7 @@ Item {
                             ? qsTr("Indexing frames… %1%")
                                 .arg(Math.round(root.controller.indexingProgress * 100))
                             : qsTr("Indexing frames…")
-                    color: "#bfc0c2"
+                    color: Theme.mediaSecondary
                     font.pixelSize: 11
                 }
 

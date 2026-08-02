@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(FrameViewer VERSION 0.2.4 LANGUAGES CXX)
+project(FrameViewer VERSION 0.3.0 LANGUAGES CXX)
 
 option(FRAMEVIEWER_BUILD_TESTS "Build FrameViewer tests" ON)
 option(FRAMEVIEWER_ENABLE_SANITIZERS "Enable address and undefined behaviour sanitizers" OFF)
@@ -45,9 +45,21 @@ set(FRAMEVIEWER_SOURCES
     src/playback/PlaybackController.hpp
     src/rendering/MpvVideoItem.cpp
     src/rendering/MpvVideoItem.hpp
+    src/platform/MacPlatformIntegration.hpp
+    src/platform/ExecutableLocator.cpp
+    src/platform/ExecutableLocator.hpp
 )
 
+if(APPLE)
+    enable_language(OBJCXX)
+    list(APPEND FRAMEVIEWER_SOURCES src/platform/MacPlatformIntegration.mm)
+else()
+    list(APPEND FRAMEVIEWER_SOURCES src/platform/MacPlatformIntegrationStub.cpp)
+endif()
+
 qt_add_executable(frameviewer ${FRAMEVIEWER_SOURCES})
+
+set_source_files_properties(qml/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 qt_add_qml_module(frameviewer
     URI FrameViewer
@@ -55,6 +67,9 @@ qt_add_qml_module(frameviewer
     RESOURCE_PREFIX /qt/qml
     QML_FILES
         qml/Main.qml
+        qml/Theme.qml
+        qml/GlassPanel.qml
+        qml/MacSetup.qml
         qml/VideoViewport.qml
         qml/PlaybackOverlay.qml
         qml/FrameSeekBar.qml
@@ -98,7 +113,9 @@ if(APPLE)
         MACOSX_BUNDLE_BUNDLE_NAME "FrameViewer"
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.frameviewer.app"
         MACOSX_BUNDLE_ICON_FILE "icon.icns"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/packaging/macos/Info.plist.in"
     )
+    target_link_libraries(frameviewer PRIVATE "-framework AppKit" "-framework CoreServices")
 endif()
 
 if(FRAMEVIEWER_ENABLE_SANITIZERS AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")

@@ -79,7 +79,7 @@ Slider {
             width: Math.max(5, (lastPosition - firstPosition) * parent.width)
             height: parent.height
             radius: parent.radius
-            color: "#5fa8ff"
+            color: Theme.accent
         }
     }
 

@@ -48,6 +48,10 @@ class ApplicationController final : public QObject {
     Q_PROPERTY(bool canExportFrameRange READ canExportFrameRange NOTIFY exportChanged)
     Q_PROPERTY(bool isExportingFrames READ isExportingFrames NOTIFY exportChanged)
     Q_PROPERTY(double exportProgress READ exportProgress NOTIFY exportChanged)
+    Q_PROPERTY(bool macOS READ macOS CONSTANT)
+    Q_PROPERTY(bool macSetupVisible READ macSetupVisible NOTIFY macSetupChanged)
+    Q_PROPERTY(bool installedInApplications READ installedInApplications NOTIFY macSetupChanged)
+    Q_PROPERTY(bool defaultVideoPlayer READ defaultVideoPlayer NOTIFY macSetupChanged)
 
 public:
     explicit ApplicationController(QObject* parent = nullptr);
@@ -83,6 +87,10 @@ public:
     [[nodiscard]] bool canExportFrameRange() const;
     [[nodiscard]] bool isExportingFrames() const;
     [[nodiscard]] double exportProgress() const;
+    [[nodiscard]] bool macOS() const;
+    [[nodiscard]] bool macSetupVisible() const;
+    [[nodiscard]] bool installedInApplications() const;
+    [[nodiscard]] bool defaultVideoPlayer() const;
 
     void setFullscreen(bool fullscreen);
     void setControlsVisible(bool visible);
@@ -106,6 +114,10 @@ public:
     Q_INVOKABLE void toggleControlsVisibility();
     Q_INVOKABLE void clearError();
     Q_INVOKABLE void reportUserActivity();
+    Q_INVOKABLE void showMacSetup();
+    Q_INVOKABLE void finishMacSetup();
+    Q_INVOKABLE void makeDefaultVideoPlayer();
+    Q_INVOKABLE void openApplicationsFolder();
 
 signals:
     void stateChanged();
@@ -123,6 +135,7 @@ signals:
     void fullscreenRequested(bool fullscreen);
     void userActivity();
     void toastRequested(const QString& message);
+    void macSetupChanged();
 
 private:
     void setState(PlayerState::Value state);
@@ -154,6 +167,9 @@ private:
     qint64 m_rangeEndFrame = 0;
     bool m_exportingFrames = false;
     double m_exportProgress = 0.0;
+    bool m_macSetupVisible = false;
+    bool m_installedInApplications = false;
+    bool m_defaultVideoPlayer = false;
 };
 
 } // namespace frameviewer

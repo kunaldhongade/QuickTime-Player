@@ -1,8 +1,9 @@
 #include "frames/FrameIndexer.hpp"
 
+#include "platform/ExecutableLocator.hpp"
+
 #include <QFileInfo>
 #include <QLoggingCategory>
-#include <QStandardPaths>
 #include <QTimer>
 
 #include <algorithm>
@@ -58,7 +59,7 @@ void FrameIndexer::start(const QString& mediaPath)
         return;
     }
 
-    const QString ffprobe = QStandardPaths::findExecutable(QStringLiteral("ffprobe"));
+    const QString ffprobe = locateExecutable(QStringLiteral("ffprobe"));
     if (ffprobe.isEmpty()) {
         emit failed(m_generation,
                     tr("FFprobe was not found. Install FFmpeg or add ffprobe to PATH."));
