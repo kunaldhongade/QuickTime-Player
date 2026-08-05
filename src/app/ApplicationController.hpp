@@ -9,6 +9,7 @@
 #include "playback/PlaybackController.hpp"
 
 #include <QEvent>
+#include <QElapsedTimer>
 #include <QObject>
 #include <QUrl>
 
@@ -170,6 +171,7 @@ private:
     bool m_macSetupVisible = false;
     bool m_installedInApplications = false;
     bool m_defaultVideoPlayer = false;
+    QElapsedTimer m_frameCountTimer;
 };
 
 } // namespace frameviewer

@@ -21,6 +21,8 @@ class MpvEngine final : public QObject {
     Q_PROPERTY(bool paused READ paused WRITE setPaused NOTIFY pausedChanged)
     Q_PROPERTY(double timePosition READ timePosition NOTIFY timePositionChanged)
     Q_PROPERTY(double duration READ duration NOTIFY durationChanged)
+    Q_PROPERTY(qint64 estimatedFrameCount READ estimatedFrameCount
+                   NOTIFY estimatedFrameCountChanged)
     Q_PROPERTY(double volume READ volume WRITE setVolume NOTIFY volumeChanged)
     Q_PROPERTY(bool muted READ muted WRITE setMuted NOTIFY mutedChanged)
     Q_PROPERTY(bool seeking READ seeking NOTIFY seekingChanged)
@@ -36,6 +38,7 @@ public:
     [[nodiscard]] bool paused() const;
     [[nodiscard]] double timePosition() const;
     [[nodiscard]] double duration() const;
+    [[nodiscard]] qint64 estimatedFrameCount() const;
     [[nodiscard]] double volume() const;
     [[nodiscard]] bool muted() const;
     [[nodiscard]] bool seeking() const;
@@ -76,6 +79,7 @@ signals:
     void pausedChanged();
     void timePositionChanged();
     void durationChanged();
+    void estimatedFrameCountChanged();
     void volumeChanged();
     void mutedChanged();
     void seekingChanged();
@@ -95,6 +99,7 @@ private:
     [[nodiscard]] bool setStringProperty(const char* name, const char* value);
     void updateBooleanProperty(const char* name, bool value);
     void updateDoubleProperty(const char* name, double value);
+    void updateIntegerProperty(const char* name, qint64 value);
     void updateStringProperty(const char* name, const QString& value);
     void publishRenderedFrame();
     void shutdown();
@@ -113,6 +118,7 @@ private:
     bool m_endOfFile = false;
     double m_timePosition = 0.0;
     double m_duration = 0.0;
+    qint64 m_estimatedFrameCount = 0;
     double m_volume = 100.0;
     bool m_muted = false;
     QString m_filename;

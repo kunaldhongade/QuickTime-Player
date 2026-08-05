@@ -29,6 +29,10 @@ public slots:
 signals:
     void started(quint64 generation);
     void progressChanged(quint64 generation, double progress);
+    void frameCountAvailable(quint64 generation,
+                             qint64 frameCount,
+                             bool exactFromMetadata,
+                             qint64 elapsedMilliseconds);
     void finished(quint64 generation, const frameviewer::FrameIndex& index, bool cacheHit);
     void failed(quint64 generation, const QString& message);
     void cancelled(quint64 generation);
@@ -40,12 +44,15 @@ private slots:
 
 private:
     void consumeLine(const QByteArray& line);
+    void startFastFrameCountProbe(const QString& ffprobe);
+    void startExactFrameIndex(const QString& ffprobe, quint64 requestedGeneration);
     void completeFromCache(const FrameIndex& index, quint64 generation);
     void reportProgress(double timestamp);
     [[nodiscard]] static std::optional<double> parseNumber(const QByteArray& value);
 
     FrameIndexCache m_cache;
     QProcess* m_process = nullptr;
+    QProcess* m_countProcess = nullptr;
     QByteArray m_pendingOutput;
     FrameIndex m_workingIndex;
     QString m_mediaPath;
@@ -56,6 +63,7 @@ private:
     double m_lastProgress = -1.0;
     std::optional<double> m_firstTimestamp;
     QElapsedTimer m_progressTimer;
+    QElapsedTimer m_countTimer;
 };
 
 } // namespace frameviewer

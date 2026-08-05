@@ -38,8 +38,14 @@ void FrameIndexerTests::indexesExactlyFortyEightFrames()
     QSignalSpy finished(&indexer, &FrameIndexer::finished);
     QSignalSpy failed(&indexer, &FrameIndexer::failed);
     QSignalSpy progress(&indexer, &FrameIndexer::progressChanged);
+    QSignalSpy frameCount(&indexer, &FrameIndexer::frameCountAvailable);
     indexer.start(path);
     indexer.setMediaDuration(2.0);
+    if (frameCount.isEmpty()) {
+        QVERIFY(frameCount.wait(1000));
+    }
+    QCOMPARE(frameCount.first().at(1).toLongLong(), 48);
+    QVERIFY(frameCount.first().at(2).toBool());
     QVERIFY(finished.wait(20000));
     QCOMPARE(failed.count(), 0);
     QVERIFY(!progress.isEmpty());

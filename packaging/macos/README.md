@@ -14,11 +14,11 @@ export FRAMEVIEWER_CODESIGN_IDENTITY="Developer ID Application: Example (TEAMID)
 export FRAMEVIEWER_FFMPEG_DIR="/path/to/approved/bin"
 export FRAMEVIEWER_LICENSES_VERIFIED=YES
 ./scripts/package_macos.sh
-xcrun notarytool submit dist/macos/FrameViewer-0.3.0-macos-arm64.dmg \
+xcrun notarytool submit dist/macos/FrameViewer-0.3.1-macos-arm64.dmg \
   --keychain-profile frameviewer-notary --wait
-xcrun stapler staple dist/macos/FrameViewer-0.3.0-macos-arm64.dmg
+xcrun stapler staple dist/macos/FrameViewer-0.3.1-macos-arm64.dmg
 spctl --assess --type open --context context:primary-signature -v \
-  dist/macos/FrameViewer-0.3.0-macos-arm64.dmg
+  dist/macos/FrameViewer-0.3.1-macos-arm64.dmg
 ```
 
 For local QA only, `./scripts/package_macos.sh --development` creates an ad-hoc signed DMG.
