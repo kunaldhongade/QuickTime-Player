@@ -9,7 +9,7 @@ ProRes and common legacy formats when those decoders are present on the system.
 The current build supports local video opening and drag-and-drop, play/pause,
 one-frame and ten-frame stepping, frame-based seeking, previous/next video navigation within the
 open file's folder, marked frame-range PNG export, a hideable control overlay, fullscreen,
-volume/mute, screenshots, and cached exact frame counts. Linux is the first production target;
+volume/mute, screenshots, immediate metadata frame counts, and cached exact frame indexes. Linux is the first production target;
 the same playback and indexing code is kept platform-neutral for macOS and Windows.
 
 The open dialog and folder navigation recognize common consumer, camera, professional and legacy
@@ -149,8 +149,10 @@ Generate deterministic media fixtures with:
   reached the Qt render target.
 - `MpvVideoItem` and its renderer create the mpv OpenGL render context only while the Qt scene
   graph context is current.
-- `FrameIndexer` starts alongside media opening, incrementally parses compact FFprobe output in a
-  cancellable `QProcess`, and reports timestamp-based progress.
+- `FrameIndexer` first runs a metadata-only FFprobe query with a strict 45 ms foreground budget,
+  publishing `nb_frames` immediately when the container provides it (or a duration × average-rate
+  estimate otherwise). It then incrementally builds the exact timestamp map in a cancellable
+  background process and reports timestamp-based progress.
 - `FrameIndexCache` keys cached indexes by canonical path, size, modification time, stream, and
   cache schema.
 - `FramePositionResolver` maps playback time to indexed presentation timestamps with binary

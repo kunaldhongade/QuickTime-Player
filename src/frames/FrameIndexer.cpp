@@ -26,7 +26,7 @@ FrameIndexer::~FrameIndexer()
 
 bool FrameIndexer::isRunning() const
 {
-    return m_process != nullptr;
+    return m_process != nullptr || m_countProcess != nullptr;
 }
 
 quint64 FrameIndexer::generation() const
@@ -47,11 +47,13 @@ void FrameIndexer::start(const QString& mediaPath)
     m_lastProgress = -1.0;
     m_firstTimestamp.reset();
     m_progressTimer.start();
+    m_countTimer.start();
 
     emit started(m_generation);
 
     FrameIndex cached;
     if (m_cache.load(m_mediaPath, cached)) {
+        emit frameCountAvailable(m_generation, cached.count(), true, m_countTimer.elapsed());
         const quint64 requestedGeneration = m_generation;
         QTimer::singleShot(0, this, [this, cached, requestedGeneration] {
             completeFromCache(cached, requestedGeneration);
@@ -66,6 +68,18 @@ void FrameIndexer::start(const QString& mediaPath)
         return;
     }
 
+    startFastFrameCountProbe(ffprobe);
+    const quint64 requestedGeneration = m_generation;
+    QTimer::singleShot(60, this, [this, ffprobe, requestedGeneration] {
+        startExactFrameIndex(ffprobe, requestedGeneration);
+    });
+}
+
+void FrameIndexer::startExactFrameIndex(const QString& ffprobe, quint64 requestedGeneration)
+{
+    if (requestedGeneration != m_generation || m_process) {
+        return;
+    }
     m_process = new QProcess(this);
     connect(m_process, &QProcess::readyReadStandardOutput, this, &FrameIndexer::consumeOutput);
     connect(m_process, &QProcess::readyReadStandardError, this, [this] {
@@ -99,25 +113,118 @@ void FrameIndexer::start(const QString& mediaPath)
 
 void FrameIndexer::cancel()
 {
-    if (!m_process) {
+    if (!m_process && !m_countProcess) {
         return;
     }
 
     m_cancelling = true;
     const quint64 cancelledGeneration = m_generation;
-    disconnect(m_process, nullptr, this, nullptr);
-    if (m_process->state() != QProcess::NotRunning) {
-        m_process->terminate();
-        if (!m_process->waitForFinished(300)) {
-            m_process->kill();
-            m_process->waitForFinished(1000);
+    if (m_countProcess) {
+        disconnect(m_countProcess, nullptr, this, nullptr);
+        if (m_countProcess->state() != QProcess::NotRunning) {
+            m_countProcess->kill();
         }
+        m_countProcess->deleteLater();
+        m_countProcess = nullptr;
     }
-    m_process->deleteLater();
-    m_process = nullptr;
+    if (m_process) {
+        disconnect(m_process, nullptr, this, nullptr);
+        if (m_process->state() != QProcess::NotRunning) {
+            m_process->terminate();
+            if (!m_process->waitForFinished(300)) {
+                m_process->kill();
+                m_process->waitForFinished(1000);
+            }
+        }
+        m_process->deleteLater();
+        m_process = nullptr;
+    }
     m_workingIndex.clear();
     m_pendingOutput.clear();
     emit cancelled(cancelledGeneration);
+}
+
+void FrameIndexer::startFastFrameCountProbe(const QString& ffprobe)
+{
+    const quint64 requestedGeneration = m_generation;
+    m_countProcess = new QProcess(this);
+    QProcess* const process = m_countProcess;
+    connect(process,
+            qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
+            this,
+            [this, process, requestedGeneration](int exitCode, QProcess::ExitStatus status) {
+                const QByteArray output = process->readAllStandardOutput();
+                if (m_countProcess == process) {
+                    m_countProcess = nullptr;
+                }
+                process->deleteLater();
+                if (requestedGeneration != m_generation || status != QProcess::NormalExit
+                    || exitCode != 0) {
+                    return;
+                }
+
+                qint64 metadataFrames = 0;
+                double duration = 0.0;
+                double frameRate = 0.0;
+                for (const QByteArray& rawLine : output.split('\n')) {
+                    const qsizetype separator = rawLine.indexOf('=');
+                    if (separator <= 0) {
+                        continue;
+                    }
+                    const QByteArray key = rawLine.left(separator).trimmed();
+                    const QByteArray value = rawLine.mid(separator + 1).trimmed();
+                    if (key == "nb_frames") {
+                        bool valid = false;
+                        metadataFrames = value.toLongLong(&valid);
+                        if (!valid) {
+                            metadataFrames = 0;
+                        }
+                    } else if (key == "duration") {
+                        duration = parseNumber(value).value_or(0.0);
+                    } else if (key == "avg_frame_rate") {
+                        const QList<QByteArray> fraction = value.split('/');
+                        if (fraction.count() == 2) {
+                            const auto numerator = parseNumber(fraction.at(0));
+                            const auto denominator = parseNumber(fraction.at(1));
+                            if (numerator && denominator && *denominator > 0.0) {
+                                frameRate = *numerator / *denominator;
+                            }
+                        }
+                    }
+                }
+
+                const bool exactFromMetadata = metadataFrames > 0;
+                const qint64 count = exactFromMetadata
+                    ? metadataFrames
+                    : (duration > 0.0 && frameRate > 0.0
+                           ? std::max<qint64>(1, std::llround(duration * frameRate))
+                           : 0);
+                if (count > 0) {
+                    qCInfo(frameIndexLog)
+                        << (exactFromMetadata ? "Metadata frame count" : "Estimated frame count")
+                        << count << "available in" << m_countTimer.elapsed() << "ms";
+                    emit frameCountAvailable(requestedGeneration,
+                                             count,
+                                             exactFromMetadata,
+                                             m_countTimer.elapsed());
+                }
+            });
+    process->start(
+        ffprobe,
+        {QStringLiteral("-v"),
+         QStringLiteral("error"),
+         QStringLiteral("-select_streams"),
+         QStringLiteral("V:0"),
+         QStringLiteral("-show_entries"),
+         QStringLiteral("stream=nb_frames,avg_frame_rate,duration"),
+         QStringLiteral("-of"),
+         QStringLiteral("default=nw=1"),
+         m_mediaPath},
+        QIODevice::ReadOnly);
+    // Container metadata is normally available in a few milliseconds. Give this
+    // tiny probe a strict foreground budget so the count is published before the
+    // first heavy scene-graph frame can delay queued process notifications.
+    process->waitForFinished(45);
 }
 
 void FrameIndexer::setMediaDuration(double seconds)

@@ -32,6 +32,7 @@ public:
     [[nodiscard]] const FrameIndex& frameIndex() const;
 
     void setFrameIndex(FrameIndex index);
+    void setEstimatedTotalFrames(qint64 total);
     void clear();
 
     Q_INVOKABLE void stepBy(int frameCount);
@@ -64,6 +65,7 @@ private:
 
     MpvEngine* m_engine = nullptr;
     FrameIndex m_index;
+    qint64 m_estimatedTotalFrames = 0;
     QTimer m_confirmationTimer;
     QTimer m_requestTimer;
     std::optional<double> m_lastRenderedPosition;

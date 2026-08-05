@@ -42,7 +42,7 @@ qint64 PlaybackController::currentFrame() const
 
 qint64 PlaybackController::totalFrames() const
 {
-    return m_index.count();
+    return m_index.isEmpty() ? m_estimatedTotalFrames : m_index.count();
 }
 
 qsizetype PlaybackController::currentZeroBasedFrame() const
@@ -91,10 +91,24 @@ void PlaybackController::setFrameIndex(FrameIndex index)
     }
 }
 
+void PlaybackController::setEstimatedTotalFrames(qint64 total)
+{
+    if (!m_index.isEmpty()) {
+        return;
+    }
+    const qint64 normalized = std::max<qint64>(0, total);
+    if (normalized == m_estimatedTotalFrames) {
+        return;
+    }
+    m_estimatedTotalFrames = normalized;
+    emit totalFramesChanged();
+}
+
 void PlaybackController::clear()
 {
     const bool wasAvailable = exactFrameIndexAvailable();
     m_index.clear();
+    m_estimatedTotalFrames = 0;
     m_confirmationTimer.stop();
     m_requestTimer.stop();
     m_busy = false;

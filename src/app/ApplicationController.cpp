@@ -50,6 +50,18 @@ ApplicationController::ApplicationController(QObject* parent)
         m_indexer.setMediaDuration(m_engine.duration());
         emit playerChanged();
     });
+    connect(&m_engine,
+            &MpvEngine::estimatedFrameCountChanged,
+            this,
+            [this] {
+                m_playback.setEstimatedTotalFrames(m_engine.estimatedFrameCount());
+                if (m_engine.estimatedFrameCount() > 0 && m_frameCountTimer.isValid()) {
+                    qInfo() << "Initial frame count" << m_engine.estimatedFrameCount()
+                            << "available in" << m_frameCountTimer.elapsed() << "ms";
+                    m_frameCountTimer.invalidate();
+                }
+                emit frameChanged();
+            });
     connect(&m_engine, &MpvEngine::volumeChanged, this, &ApplicationController::playerChanged);
     connect(&m_engine, &MpvEngine::mutedChanged, this, &ApplicationController::playerChanged);
     connect(&m_engine, &MpvEngine::seekingChanged, this, &ApplicationController::playerChanged);
@@ -67,6 +79,17 @@ ApplicationController::ApplicationController(QObject* parent)
         }
     });
 
+    connect(&m_indexer,
+            &FrameIndexer::frameCountAvailable,
+            this,
+            [this](quint64 generation, qint64 count, bool, qint64) {
+                if (generation != m_indexGeneration) {
+                    return;
+                }
+                m_playback.setEstimatedTotalFrames(count);
+                m_frameCountTimer.invalidate();
+                emit frameChanged();
+            });
     connect(&m_indexer,
             &FrameIndexer::progressChanged,
             this,
@@ -511,6 +534,7 @@ void ApplicationController::openFile(const QUrl& url)
     m_indexer.cancel();
     m_playback.clear();
     m_indexing = true;
+    m_frameCountTimer.start();
     m_indexingProgress = 0.0;
     m_errorMessage.clear();
     m_currentPath = information.absoluteFilePath();
@@ -524,6 +548,7 @@ void ApplicationController::openFile(const QUrl& url)
     emit frameChanged();
     emit exportChanged();
     setState(PlayerState::Opening);
+    m_indexGeneration = m_indexer.generation() + 1;
     m_indexer.start(m_currentPath);
     m_indexGeneration = m_indexer.generation();
     m_engine.loadFile(m_currentPath);

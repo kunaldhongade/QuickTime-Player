@@ -102,6 +102,11 @@ double MpvEngine::duration() const
     return m_duration;
 }
 
+qint64 MpvEngine::estimatedFrameCount() const
+{
+    return m_estimatedFrameCount;
+}
+
 double MpvEngine::volume() const
 {
     return m_volume;
@@ -180,14 +185,18 @@ void MpvEngine::loadFile(const QString& path)
     qCInfo(mpvLog) << "Opening media" << QFileInfo(path).fileName();
     m_hasMedia = false;
     emit hasMediaChanged();
+    if (m_estimatedFrameCount != 0) {
+        m_estimatedFrameCount = 0;
+        emit estimatedFrameCountChanged();
+    }
     m_endOfFile = false;
     emit endOfFileChanged();
+    m_pendingLoadPath.clear();
     if (!m_renderReady.load()) {
         m_pendingLoadPath = path;
         qCInfo(mpvLog) << "Waiting for the Qt OpenGL surface before loading media";
         return;
     }
-    m_pendingLoadPath.clear();
     issueCommand({QByteArrayLiteral("loadfile"), path.toUtf8(), QByteArrayLiteral("replace")});
 }
 
@@ -344,6 +353,8 @@ void MpvEngine::drainEvents()
                                       *static_cast<int*>(property->data) != 0);
             } else if (property->format == MPV_FORMAT_DOUBLE) {
                 updateDoubleProperty(property->name, *static_cast<double*>(property->data));
+            } else if (property->format == MPV_FORMAT_INT64) {
+                updateIntegerProperty(property->name, *static_cast<int64_t*>(property->data));
             } else if (property->format == MPV_FORMAT_STRING) {
                 const char* const value = *static_cast<char**>(property->data);
                 updateStringProperty(property->name, QString::fromUtf8(value ? value : ""));
@@ -413,6 +424,7 @@ void MpvEngine::observeProperties()
         Observation{"pause", MPV_FORMAT_FLAG},
         Observation{"time-pos", MPV_FORMAT_DOUBLE},
         Observation{"duration", MPV_FORMAT_DOUBLE},
+        Observation{"estimated-frame-count", MPV_FORMAT_INT64},
         Observation{"volume", MPV_FORMAT_DOUBLE},
         Observation{"mute", MPV_FORMAT_FLAG},
         Observation{"seeking", MPV_FORMAT_FLAG},
@@ -508,6 +520,17 @@ void MpvEngine::updateDoubleProperty(const char* name, double value)
     } else if (property == "volume" && !qFuzzyCompare(value + 1.0, m_volume + 1.0)) {
         m_volume = value;
         emit volumeChanged();
+    }
+}
+
+void MpvEngine::updateIntegerProperty(const char* name, qint64 value)
+{
+    if (QByteArray(name) == "estimated-frame-count") {
+        const qint64 normalized = std::max<qint64>(0, value);
+        if (normalized != m_estimatedFrameCount) {
+            m_estimatedFrameCount = normalized;
+            emit estimatedFrameCountChanged();
+        }
     }
 }
 
